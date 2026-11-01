@@ -24,13 +24,13 @@
   // ---------- פרופיל ----------
   function newProfile() {
     return { v: 1, levels: { times: 1 }, windows: { times: [] }, stats: { times: { answered: 0, correct: 0 } }, hist: { times: '' },
-      baseline: { times: { n: 0, c: 0 } }, skills: {}, start: null, lastCounts: {}, days: {}, facts: {} };
+      baseline: { times: { n: 0, c: 0 } }, skills: {}, start: null, lastCounts: {}, days: {}, facts: {}, rlog: [] };
   }
   function ensureProfile(p) {
     const b = newProfile();
     p = p || {};
     ['levels', 'windows', 'stats', 'hist', 'baseline'].forEach(k => { p[k] = p[k] || {}; if (p[k].times === undefined) p[k].times = b[k].times; });
-    p.skills = p.skills || {}; p.days = p.days || {}; p.facts = p.facts || {}; p.lastCounts = p.lastCounts || {};
+    p.skills = p.skills || {}; p.days = p.days || {}; p.facts = p.facts || {}; p.lastCounts = p.lastCounts || {}; p.rlog = Array.isArray(p.rlog) ? p.rlog : [];
     if (p.start === undefined) p.start = null;
     p.v = 1;
     return p;
@@ -44,6 +44,16 @@
     const res = E.recordAnswer(profile, ID, ok, day, q.skill);
     recordFact(profile, q, ok);
     return res;
+  }
+  // זמן: ליום ולנושא (במנוע הראשי), ולכל תרגיל בנפרד. יומן סבבים (30 אחרונים) לצפייה של ההורה בלבד.
+  function recordTime(profile, q, day, ms) {
+    const m = E.recordTime(profile, ID, day, ms);
+    const f = profile.facts[q.fact] || (profile.facts[q.fact] = { n: 0, c: 0, r: '' });
+    f.ms = (f.ms || 0) + m; f.t = (f.t || 0) + 1;
+    return m;
+  }
+  function logRound(profile, day, info) {
+    profile.rlog = (profile.rlog || []).concat([{ d: day, n: info.n, ok: info.ok, ms: Math.round(info.ms), lv: info.lv }]).slice(-30);
   }
   function factStatus(f) {
     if (!f || !f.n) return 'new';
@@ -160,6 +170,6 @@
     return n;
   }
 
-  return { ID, PER_SESSION, MAX_LEVEL, TABLES, LEVEL_INFO, MIX, DIVISION_FROM, factKey, newProfile, ensureProfile, record, recordFact, factStatus,
+  return { ID, PER_SESSION, MAX_LEVEL, TABLES, LEVEL_INFO, MIX, DIVISION_FROM, factKey, newProfile, ensureProfile, record, recordFact, recordTime, logRound, factStatus,
     generateQuestion, seenKey, checkAnswer, strategy, arraySvg, allFacts, weakFacts, tableStats, streakAny };
 });

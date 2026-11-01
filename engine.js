@@ -573,15 +573,50 @@
     5: { name: 'מחומש', inn: 'במחומש' }, 6: { name: 'משושה', inn: 'במשושה' },
     7: { name: 'משובע', inn: 'במשובע' }, 8: { name: 'מתומן', inn: 'במתומן' },
   };
-  // רק עובדות חד-משמעיות (מצולעים משוכללים / צורות מוגדרות)
+  // רק עובדות חד-משמעיות (מצולעים משוכללים / צורות מוגדרות). fig: קדקודים, זוגות צלעות מקבילות (אינדקס צלע i = קדקוד i עד i+1), וקדקודים עם זווית ישרה.
+  const regPts = (n, cx, cy, R) => Array.from({ length: n }, (_, i) => { const a = -Math.PI / 2 + 2 * Math.PI * i / n; return [cx + R * Math.cos(a), cy + R * Math.sin(a)]; });
   const SHAPES = [
-    { name: 'מלבן', inn: 'במלבן', par: 2, right: 4 },
-    { name: 'ריבוע', inn: 'בריבוע', par: 2, right: 4 },
-    { name: 'משולש שווה צלעות', inn: 'במשולש שווה צלעות', par: 0, right: 0 },
-    { name: 'משולש ישר זווית', inn: 'במשולש ישר זווית', par: 0, right: 1 },
-    { name: 'מחומש משוכלל', inn: 'במחומש משוכלל', par: 0, right: 0 },
-    { name: 'משושה משוכלל', inn: 'במשושה משוכלל', par: 3, right: 0 },
+    { name: 'מלבן', inn: 'במלבן', par: 2, right: 4, fig: { pts: [[30, 28], [170, 28], [170, 116], [30, 116]], pairs: [[0, 2], [1, 3]], rights: [0, 1, 2, 3] } },
+    { name: 'ריבוע', inn: 'בריבוע', par: 2, right: 4, fig: { pts: [[56, 24], [144, 24], [144, 112], [56, 112]], pairs: [[0, 2], [1, 3]], rights: [0, 1, 2, 3] } },
+    { name: 'משולש שווה צלעות', inn: 'במשולש שווה צלעות', par: 0, right: 0, fig: { pts: [[100, 18], [162, 126], [38, 126]], pairs: [], rights: [] } },
+    { name: 'משולש ישר זווית', inn: 'במשולש ישר זווית', par: 0, right: 1, fig: { pts: [[44, 20], [44, 124], [164, 124]], pairs: [], rights: [1] } },
+    { name: 'מחומש משוכלל', inn: 'במחומש משוכלל', par: 0, right: 0, fig: { pts: regPts(5, 100, 74, 60), pairs: [], rights: [] } },
+    { name: 'משושה משוכלל', inn: 'במשושה משוכלל', par: 3, right: 0, fig: { pts: regPts(6, 100, 72, 60), pairs: [[0, 3], [1, 4], [2, 5]], rights: [] } },
   ];
+  // ציור צורה מוגדרת. marks: { par: true | [אינדקסי זוגות], right: true | [אינדקסי קדקודים] } — בציור השאלה אין סימונים כדי לא לגלות את התשובה.
+  function shapeSvg(name, marks) {
+    const sh = SHAPES.find(x => x.name === name); if (!sh) return '';
+    const P = sh.fig.pts, n = P.length, f = v => v.toFixed(1);
+    const mk2 = marks || {};
+    let s = `<svg viewBox="0 0 200 144" role="img" aria-label="${name}">`;
+    s += `<polygon class="poly" points="${P.map(p => f(p[0]) + ',' + f(p[1])).join(' ')}"/>`;
+    const unit = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [dx / l, dy / l]; };
+    if (mk2.par) {
+      const which = mk2.par === true ? sh.fig.pairs.map((_, i) => i) : mk2.par;
+      which.forEach(pi => {
+        const [i, j] = sh.fig.pairs[pi];
+        const u1 = unit(P[i], P[(i + 1) % n]);
+        [i, j].forEach(side => {
+          const a = P[side], b = P[(side + 1) % n];
+          let u = unit(a, b); if (u[0] * u1[0] + u[1] * u1[1] < 0) u = [-u[0], -u[1]]; // כל החצים באותו כיוון
+          const v = [-u[1], u[0]], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2, cnt = pi + 1;
+          for (let k = 0; k < cnt; k++) {
+            const o = (k - (cnt - 1) / 2) * 8, cx = mx + u[0] * o, cy = my + u[1] * o;
+            s += `<path class="pm" d="M${f(cx - u[0] * 4 + v[0] * 5)},${f(cy - u[1] * 4 + v[1] * 5)} L${f(cx + u[0] * 4)},${f(cy + u[1] * 4)} L${f(cx - u[0] * 4 - v[0] * 5)},${f(cy - u[1] * 4 - v[1] * 5)}"/>`;
+          }
+        });
+      });
+    }
+    if (mk2.right) {
+      const which = mk2.right === true ? sh.fig.rights : mk2.right;
+      which.forEach(vi => {
+        const p = P[vi], u1 = unit(p, P[(vi + n - 1) % n]), u2 = unit(p, P[(vi + 1) % n]), z = 11;
+        s += `<path class="ra" d="M${f(p[0] + u1[0] * z)},${f(p[1] + u1[1] * z)} L${f(p[0] + (u1[0] + u2[0]) * z)},${f(p[1] + (u1[1] + u2[1]) * z)} L${f(p[0] + u2[0] * z)},${f(p[1] + u2[1] * z)}"/>`;
+      });
+    }
+    s += P.map(p => `<circle class="vtx" cx="${f(p[0])}" cy="${f(p[1])}" r="3.5"/>`).join('');
+    return s + '</svg>';
+  }
   function qPolySides(r, level, maxN) {
     const n = ri(r, 3, maxN), vert = r() < 0.4;
     return mk('geometry', level, 'polySides', {
@@ -593,7 +628,7 @@
   function qPolyFacts(r, level) {
     const n = ri(r, 3, 8), vert = r() < 0.4;
     return mk('geometry', level, 'polyFacts', {
-      text: `כמה ${vert ? 'קדקודים' : 'צלעות'} יש ${POLY[n].inn}?`, answer: n,
+      text: `כמה ${vert ? 'קדקודים' : 'צלעות'} יש ${POLY[n].inn}?`, answer: n, svg: polySvg(n),
       explain: `${POLY[n].name} הוא מצולע בעל ${n} צלעות ו-${n} קדקודים.`,
       meta: { n, vert, show: [] },
     });
@@ -616,15 +651,16 @@
       diag: { text: 'אלכסון במצולע הוא קטע שמחבר...', good: 'שני קדקודים שאינם סמוכים זה לזה', bad: ['שני קדקודים סמוכים', 'אמצעים של שתי צלעות סמוכות', 'קדקוד אחד לעצמו'],
         why: 'אלכסון מחבר שני קדקודים שאינם סמוכים. קטע שמחבר קדקודים סמוכים הוא צלע.' },
     }[which];
+    const fig = which === 'par' ? shapeSvg('מלבן', { par: [0] }) : which === 'perp' ? shapeSvg('מלבן', { right: [0] }) : polySvg(5, true);
     return mk('geometry', level, 'def_' + which, {
       kind: 'choice', text: D.text, choices: shuffle(r, [D.good].concat(D.bad)), answer: D.good,
-      explain: D.why, meta: { which, show: [] },
+      explain: D.why, svgAfter: fig, meta: { which, show: [] },
     });
   }
   function qParPairs(r, level, pool) {
     const s = pick(r, pool);
     return mk('geometry', level, 'parPairs', {
-      text: `כמה זוגות של צלעות מקבילות יש ${s.inn}?`, answer: s.par,
+      text: `כמה זוגות של צלעות מקבילות יש ${s.inn}?`, answer: s.par, svg: shapeSvg(s.name), svgAfter: shapeSvg(s.name, { par: true }),
       explain: s.par === 0 ? `${s.inn} אין צלעות מקבילות.` : `${s.inn} יש ${s.par} זוגות של צלעות מקבילות.`,
       meta: { shape: s.name, show: [] },
     });
@@ -632,7 +668,7 @@
   function qRightAngles(r, level, pool) {
     const s = pick(r, pool);
     return mk('geometry', level, 'rightAngles', {
-      text: `כמה זוויות ישרות יש ${s.inn}?`, answer: s.right,
+      text: `כמה זוויות ישרות יש ${s.inn}?`, answer: s.right, svg: shapeSvg(s.name), svgAfter: shapeSvg(s.name, { right: true }),
       explain: s.right === 0 ? `${s.inn} אין זוויות ישרות.` : `${s.inn} יש ${s.right} זוויות ישרות.`,
       meta: { shape: s.name, show: [] },
     });
@@ -655,6 +691,7 @@
     return mk('geometry', level, 'whichShape', {
       kind: 'choice', text, choices: opts.map(s => s.name), answer: target.name,
       explain: `${target.inn} ${prop === 'par' ? (v === 0 ? 'אין צלעות מקבילות' : `יש ${v} זוגות של צלעות מקבילות`) : (v === 0 ? 'אין זוויות ישרות' : `יש ${v} זוויות ישרות`)}, ובשאר הצורות המספר שונה.`.replace('יש 1 זוגות', 'יש זוג אחד').replace('יש 1 זוויות ישרות', 'יש זווית ישרה אחת'),
+      svgAfter: shapeSvg(target.name, prop === 'par' ? { par: true } : { right: true }),
       meta: { prop, value: v, shape: target.name, options: opts.map(s => s.name), show: [] },
     });
   }
@@ -810,6 +847,17 @@
     d.rounds = (d.rounds || 0) + 1;
     if (counts) Object.assign(profile.lastCounts, counts);
   }
+  // זמן תשובה (מילי-שניות): נשמר רק לצפייה של ההורה. מוגבל כדי שהפסקה באמצע שאלה לא תעוות את הממוצע.
+  const TIME_CAP_MS = 120000;
+  function recordTime(profile, topicId, day, ms) {
+    const m = Math.max(0, Math.min(TIME_CAP_MS, Math.round(Number(ms) || 0)));
+    const dk = day || dayKey();
+    const d = profile.days[dk] || (profile.days[dk] = { answered: 0, correct: 0 });
+    d.ms = (d.ms || 0) + m; d.tn = (d.tn || 0) + 1;
+    const st = profile.stats[topicId];
+    if (st) { st.ms = (st.ms || 0) + m; st.tn = (st.tn || 0) + 1; }
+    return m;
+  }
   function accuracy(profile, topicId) {
     const s = profile.stats[topicId];
     return s.answered ? s.correct / s.answered : null;
@@ -854,8 +902,8 @@
   return {
     TOPICS, LEVEL_NAMES, MAX_LEVEL, START_LEVEL, ROUND_MIN, ROUND_MAX,
     mulberry32, fmt, generateQuestion, qKey, checkAnswer, parseNumber,
-    newProfile, ensureProfile, recordAnswer, completeRound, accuracy, recentAccuracy,
+    newProfile, ensureProfile, recordAnswer, recordTime, TIME_CAP_MS, completeRound, accuracy, recentAccuracy,
     isMastered, isWeak, questionsPerTopic, planRound, streak, dayKey,
-    _internals: { SHAPES, POLY },
+    _internals: { SHAPES, POLY, shapeSvg, polySvg },
   };
 });

@@ -362,5 +362,47 @@
       paragraphs: paras, weakFacts: weak, weakTables, strongTables, facts, byType, recommendations: rec, weekly };
   }
 
-  return { SHORT, LEVEL_NAMES, LABEL, TIPS, BY_TOPIC, skillLabel, skillTip, skillTopic, kidFeedback, analyzeKid, timesFeedback, analyzeTimes };
+
+  // ---------- זמני תשובה (להורה בלבד; הילד לא רואה שעון ולא מקבל פידבק על מהירות) ----------
+  const fmtDur = ms => {
+    const s = Math.round(ms / 1000);
+    if (s < 60) return s + ' שנ׳';
+    return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0') + ' דק׳';
+  };
+  const fmtAvg = ms => { const v = Math.round(ms / 100) / 10; return (Number.isInteger(v) ? v : v.toFixed(1)) + ' שנ׳'; };
+  // days: {day:{ms,tn,answered,correct}}, stats: {topic:{ms,tn}}, rlog: [{d,n,ok,ms,lv}], facts: {key:{ms,t}}
+  function analyzeTiming(o) {
+    const days = o.days || {}, stats = o.stats || {}, rlog = (o.rlog || []).filter(r => r && r.n > 0 && r.ms > 0), facts = o.facts || {};
+    let ms = 0, tn = 0;
+    Object.keys(days).forEach(k => { if (days[k].tn) { ms += days[k].ms || 0; tn += days[k].tn; } });
+    const out = { totalMs: ms, timed: tn, avgMs: tn ? ms / tn : null, lastRound: null, trend: null, trendText: '', slowFacts: [], byTopic: [], paragraphs: [] };
+    if (!tn) return out;
+    const lr = rlog[rlog.length - 1];
+    if (lr) out.lastRound = { day: lr.d, n: lr.n, ok: lr.ok, ms: lr.ms, avgMs: lr.ms / lr.n };
+    if (rlog.length >= 6) {
+      const rec = rlog.slice(-3), prev = rlog.slice(-8, -3);
+      const sum = a => a.reduce((x, r) => ({ ms: x.ms + r.ms, n: x.n + r.n, ok: x.ok + r.ok }), { ms: 0, n: 0, ok: 0 });
+      const r = sum(rec), p = sum(prev), ra = r.ms / r.n, pa = p.ms / p.n, racc = r.ok / r.n, pacc = p.ok / p.n;
+      out.trend = ra < pa * 0.85 ? 'faster' : ra > pa * 1.15 ? 'slower' : 'steady';
+      const base = `בשלושת הסבבים האחרונים הממוצע לשאלה הוא ${fmtAvg(ra)}, לעומת ${fmtAvg(pa)} בסבבים שלפניהם`;
+      const accNote = racc + 0.1 < pacc ? ' והדיוק ירד, ולכן כדאי להרגיע את הקצב ולתת תשובה בטוחה' : racc >= pacc - 0.05 ? ' והדיוק נשמר' : '';
+      out.trendText = out.trend === 'faster' ? `${base}: מהיר יותר${accNote}.` : out.trend === 'slower' ? `${base}: איטי יותר${accNote}. זה טבעי כשהרמה עולה או כשתרגילים חדשים מופיעים.` : `${base}: קצב יציב${accNote}.`;
+    }
+    Object.keys(facts).forEach(k => {
+      const f = facts[k];
+      if (f && f.t >= 2 && f.ms > 0) { const [a, b] = k.split('x'); out.slowFacts.push({ key: k, text: `${a} × ${b}`, avgMs: f.ms / f.t, tries: f.t }); }
+    });
+    const typ = out.avgMs;
+    out.slowFacts = out.slowFacts.filter(f => f.avgMs >= Math.max(typ * 1.4, 4000)).sort((x, y) => y.avgMs - x.avgMs).slice(0, 5);
+    Object.keys(stats).forEach(id => {
+      const t = stats[id];
+      if (t && t.tn >= 5 && t.ms > 0) out.byTopic.push({ id, short: SHORT[id] || id, avgMs: t.ms / t.tn, n: t.tn });
+    });
+    if (out.lastRound) out.paragraphs.push(`בסבב האחרון: ${out.lastRound.ok} מתוך ${out.lastRound.n} תוך ${fmtDur(out.lastRound.ms)}, ממוצע ${fmtAvg(out.lastRound.avgMs)} לשאלה.`);
+    out.paragraphs.push(`בכל התרגול שנמדד (${tn} שאלות): ממוצע ${fmtAvg(out.avgMs)} לשאלה.`);
+    if (out.trendText) out.paragraphs.push(out.trendText);
+    return out;
+  }
+
+  return { fmtDur, fmtAvg, analyzeTiming, SHORT, LEVEL_NAMES, LABEL, TIPS, BY_TOPIC, skillLabel, skillTip, skillTopic, kidFeedback, analyzeKid, timesFeedback, analyzeTimes };
 });

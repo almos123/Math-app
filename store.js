@@ -141,7 +141,7 @@ async function flush(id) {
       levels: p.levels, stats: p.stats, days: p.days, hist: p.hist, baseline: p.baseline, skills: p.skills,
       start: p.start || null, lastCounts: p.lastCounts,
       streak: T().streakAny(p, x),
-      ...(timesUsed ? { programs: { times: { levels: x.levels, stats: x.stats, days: x.days, hist: x.hist, baseline: x.baseline, skills: x.skills, start: x.start || null, facts: x.facts } } } : {}),
+      ...(timesUsed ? { programs: { times: { levels: x.levels, stats: x.stats, days: x.days, hist: x.hist, baseline: x.baseline, skills: x.skills, start: x.start || null, facts: x.facts, rlog: x.rlog || [] } } } : {}),
       lastActive: new Date().toISOString(),
       updatedAt: fs.serverTimestamp(),
     }, { merge: true });

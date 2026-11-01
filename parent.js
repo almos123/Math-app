@@ -80,6 +80,18 @@ function topicBlock(t) {
   </div>`;
 }
 
+
+// זמני תשובה: מוצגים להורה בלבד (אין שום שעון או זמן בצד הילד)
+function timeBlock(tm, rlog) {
+  if (!tm.timed) return '<div><h4>זמני תרגול</h4><p class="p-sub">הזמן מתחיל להימדד מהתרגול הבא.</p></div>';
+  const rows = (rlog || []).filter(r => r.ms > 0).slice(-8).reverse();
+  const rtable = rows.length ? `<details><summary>סבבים אחרונים עם זמן</summary><table class="t"><thead><tr><th>יום</th><th class="n">תוצאה</th><th class="n">זמן</th><th class="n">ממוצע לשאלה</th></tr></thead><tbody>${rows.map(r => `<tr><td>${dm(r.d)}</td><td class="n">${r.ok}/${r.n}</td><td class="n">${I.fmtDur(r.ms)}</td><td class="n">${I.fmtAvg(r.ms / r.n)}</td></tr>`).join('')}</tbody></table></details>` : '';
+  const slow = tm.slowFacts.length ? `<p><b>תרגילים שלוקחים יותר זמן:</b> ${tm.slowFacts.map(f => `<span dir="ltr">${esc(f.text)}</span> (${I.fmtAvg(f.avgMs)})`).join(' · ')}</p>` : '';
+  const bt = tm.byTopic.length ? `<p><b>ממוצע לשאלה לפי נושא:</b> ${tm.byTopic.map(t => `${esc(t.short)} ${I.fmtAvg(t.avgMs)}`).join(' · ')}</p>` : '';
+  return `<div class="timeblk"><h4>⏱ זמני תרגול (מוצג להורים בלבד)</h4>${tm.paragraphs.map(x => `<p>${esc(x)}</p>`).join('')}${slow}${bt}${rtable}</div>`;
+}
+const dayTime = d => (d && d.tn ? [I.fmtDur(d.ms), I.fmtAvg(d.ms / d.tn)] : ['לא זמין', 'לא זמין']);
+
 const TIMES_STATUS = STATUS;
 function gridHtml(facts) {
   const by = {}; facts.forEach(f => { by[f.key] = f.status; });
@@ -98,12 +110,14 @@ function timesSection(kid, xp, today) {
   const days = xp.days || {}, dl = Object.keys(days).filter(d => days[d].answered > 0).sort();
   const series = dl.slice(-14).map(d => ({ day: d, answered: days[d].answered, correct: days[d].correct }));
   const t = days[today] || { answered: 0, rounds: 0 };
-  const table = `<table class="t"><thead><tr><th>יום</th><th class="n">תרגילים</th><th class="n">נכונים</th><th class="n">דיוק</th></tr></thead><tbody>${series.slice().reverse().map(d => `<tr><td>${dm(d.day)}</td><td class="n">${d.answered}</td><td class="n">${d.correct}</td><td class="n">${pct(d.correct, d.answered)}%</td></tr>`).join('')}</tbody></table>`;
+  const table = `<table class="t"><thead><tr><th>יום</th><th class="n">תרגילים</th><th class="n">נכונים</th><th class="n">דיוק</th><th class="n">זמן</th><th class="n">ממוצע</th></tr></thead><tbody>${series.slice().reverse().map(d => { const tt = dayTime(days[d.day]); return `<tr><td>${dm(d.day)}</td><td class="n">${d.answered}</td><td class="n">${d.correct}</td><td class="n">${pct(d.correct, d.answered)}%</td><td class="n">${tt[0]}</td><td class="n">${tt[1]}</td></tr>`; }).join('')}</tbody></table>`;
+  const tm = I.analyzeTiming({ days, stats: xp.stats, rlog: xp.rlog, facts: xp.facts });
   const tb = { id: 'times', short: 'לוח הכפל', level: a.level, startLevel: a.startLevel, answered: a.total, recentAcc: a.recentAcc, baseAcc: a.baseAcc };
   return `<section class="prog-sec" aria-label="לוח הכפל"><h3>✖️ לוח הכפל <span class="chip ${cls}">${lbl}</span></h3>
     <section class="summary"><h3>סיכום</h3>${a.paragraphs.map(p => `<p>${esc(p)}</p>`).join('')}${a.weekly ? `<p>${esc(a.weekly.text)}</p>` : ''}</section>
     <div class="bar" aria-hidden="true">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= a.level ? 'on' : ''}"></i>`).join('')}</div>
     <dl class="cmp"><div><dt>התחלה</dt><dd>${fmtStart(tb)}</dd></div><div><dt>עכשיו</dt><dd>${fmtNow(tb)}</dd></div><div><dt>היום</dt><dd>${t.answered} שאלות</dd></div></dl>
+    ${timeBlock(tm, xp.rlog)}
     ${a.total >= 5 ? `<div><h4>מפת התרגילים</h4>${gridHtml(a.facts)}</div>` : ''}
     ${a.weakFacts.length ? `<div><h4>תרגילים לחיזוק</h4><ul class="weakl">${a.weakFacts.map(w => `<li><b>${esc(w.text)}</b> (${w.right} נכון מתוך ${w.tries})<br>${esc(w.tip)}</li>`).join('')}</ul></div>` : ''}
     <div><h4>המלצות להמשך</h4><ul class="recs">${a.recommendations.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>
@@ -144,7 +158,9 @@ function testSection(kid, profile, sessions, dayList, today) {
   const wkPct = pct(week.c, week.n);
   const a = I.analyzeKid(profile, { name: kid.name, gender: kid.gender, today });
   const series = dayList.slice(-14).map(d => ({ day: d, answered: days[d].answered, correct: days[d].correct }));
-  const table = `<table class="t"><thead><tr><th>יום</th><th class="n">תרגילים</th><th class="n">נכונים</th><th class="n">דיוק</th><th class="n">סבבים</th></tr></thead><tbody>${series.slice().reverse().map(d => `<tr><td>${dm(d.day)}</td><td class="n">${d.answered}</td><td class="n">${d.correct}</td><td class="n">${pct(d.correct, d.answered)}%</td><td class="n">${days[d.day].rounds || 0}</td></tr>`).join('')}</tbody></table>`;
+  const table = `<table class="t"><thead><tr><th>יום</th><th class="n">תרגילים</th><th class="n">נכונים</th><th class="n">דיוק</th><th class="n">סבבים</th><th class="n">זמן</th><th class="n">ממוצע</th></tr></thead><tbody>${series.slice().reverse().map(d => { const tt = dayTime(days[d.day]); return `<tr><td>${dm(d.day)}</td><td class="n">${d.answered}</td><td class="n">${d.correct}</td><td class="n">${pct(d.correct, d.answered)}%</td><td class="n">${days[d.day].rounds || 0}</td><td class="n">${tt[0]}</td><td class="n">${tt[1]}</td></tr>`; }).join('')}</tbody></table>`;
+  const tmT = I.analyzeTiming({ days, stats: profile.stats });
+  const tmHtml = tmT.timed ? `<div class="timeblk"><h4>⏱ זמני תרגול (מוצג להורים בלבד)</h4><p>בכל התרגול שנמדד (${tmT.timed} שאלות): ממוצע ${I.fmtAvg(tmT.avgMs)} לשאלה, סך הכול ${I.fmtDur(tmT.totalMs)}.</p>${tmT.byTopic.length ? `<p><b>ממוצע לשאלה לפי נושא:</b> ${tmT.byTopic.map(t => `${esc(t.short)} ${I.fmtAvg(t.avgMs)}`).join(' · ')}</p>` : ''}</div>` : '';
   return `<section class="summary" aria-label="סיכום מילולי"><h3>סיכום</h3>${a.paragraphs.map(p => `<p>${esc(p)}</p>`).join('')}${a.weekly ? `<p>${esc(a.weekly.text)}</p>` : ''}</section>
     <div class="stats">
       <div class="stat"><b>${t.answered} שאלות${t.rounds ? ` · ${t.rounds} ${t.rounds === 1 ? 'סבב' : 'סבבים'}` : ''}</b><span>היום</span></div>
@@ -153,6 +169,7 @@ function testSection(kid, profile, sessions, dayList, today) {
     <div><h4>השוואה בין ההתחלה למצב הנוכחי, לפי נושא</h4><div class="tbs">${a.topics.map(topicBlock).join('')}</div>
       <p class="p-sub note">"התחלה" היא 10 התשובות הראשונות בנושא, ו"עכשיו" הן 15 התשובות האחרונות. הרמה מתעדכנת אחרי כל תשובה, ולכן דיוק גבוה ברמה גבוהה יותר הוא שיפור גם אם אחוז ההצלחה דומה.</p></div>
     ${series.length ? `<div><h4>דיוק יומי</h4>${chart(series)}</div>` : ''}
+    ${tmHtml}
     <details><summary>טבלת ימים</summary>${table}</details>`;
 }
 

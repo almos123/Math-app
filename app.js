@@ -264,13 +264,22 @@ function viewDone() {
   </main>`;
 }
 
+// ---------- שעון נסתר: מודד זמן תשובה בלי להציג אותו לילד. נעצר כשהאפליקציה ברקע ----------
+const clock = { t0: 0, acc: 0, on: false, paused: false };
+function clockStart() { clock.acc = 0; clock.t0 = performance.now(); clock.on = true; clock.paused = false; }
+function clockStop() { if (clock.on) { clock.acc += performance.now() - clock.t0; clock.on = false; } clock.paused = false; return clock.acc; }
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (clock.on) { clock.acc += performance.now() - clock.t0; clock.on = false; clock.paused = true; } }
+  else if (clock.paused) { clock.t0 = performance.now(); clock.on = true; clock.paused = false; }
+});
+
 // ---------- מהלך סבב ----------
 function startRun(program) {
   program = program === 'times' ? 'times' : 'test';
   const rng = E.mulberry32((Date.now() ^ 0x5bd1e995) >>> 0);
   const plan = program === 'times' ? [{ topic: 'times', count: T.PER_SESSION }] : E.planRound(data.profile, rng);
   run = {
-    program, rng, plan, b: 0, qi: 0, correct: 0, seen: new Set(), events: [], typed: '', locked: false, q: null, fb: null,
+    program, rng, plan, b: 0, qi: 0, correct: 0, ms: 0, seen: new Set(), events: [], typed: '', locked: false, q: null, fb: null,
     blocks: plan.map(p => ({ id: p.topic, n: 0, ok: 0, levelBefore: levelOf(p.topic), levelAfter: levelOf(p.topic), results: [] })),
   };
   viewIntro();
@@ -297,7 +306,7 @@ function nextQ() {
     run.seen.add(k); data.recent.push(k);
   }
   run.q = q; run.typed = ''; run.locked = false;
-  viewQuiz();
+  viewQuiz(); clockStart();
 }
 function finishRound() {
   const day = E.dayKey(), counts = {};
@@ -309,6 +318,7 @@ function finishRound() {
     const b = run.blocks[0];
     run.fb = I.timesFeedback({ n: b.n, ok: b.ok, levelBefore: b.levelBefore, levelAfter: levelOf('times'), results: b.results, prev: data.lastTimes, seed: Date.now() % 997 });
     data.lastTimes = { n: b.n, ok: b.ok };
+    T.logRound(data.programs.times, day, { n: b.n, ok: b.ok, ms: run.ms, lv: b.levelBefore });
   } else {
     run.fb = I.kidFeedback({ topics: run.blocks, prev: data.lastRound, seed: Date.now() % 997 });
     data.lastRound = Object.fromEntries(run.blocks.map(b => [b.id, { n: b.n, ok: b.ok }]));
@@ -317,12 +327,13 @@ function finishRound() {
   viewDone();
 }
 
-function logAnswer(q, ok, givenText, before) {
+function logAnswer(q, ok, givenText, before, ms) {
   const day = E.dayKey();
   const s = data.sessions[day] || (data.sessions[day] = { date: day, kidId: kid.id, answered: 0, correct: 0, rounds: 0, byTopic: {}, levelStart: before, levelEnd: {}, mistakes: [] });
   s.answered++; if (ok) s.correct++;
   const bt = s.byTopic[q.topic] || (s.byTopic[q.topic] = { answered: 0, correct: 0 });
   bt.answered++; if (ok) bt.correct++;
+  bt.ms = (bt.ms || 0) + ms; bt.tn = (bt.tn || 0) + 1; // זמן: לצפיית ההורה בלבד
   s.levelEnd = Object.assign({}, data.profile.levels);
   if (!ok && s.mistakes.length < 40) {
     s.mistakes.push({ topic: q.topic, level: q.level, q: plain(q.text + (q.eq ? ' ' + q.eq : '')), given: givenText, correct: plain(q.kind === 'choice' ? q.answer : E.fmt(q.answer)), t: new Date().toISOString() });
@@ -336,13 +347,16 @@ function submit(given, btnIndex) {
   const q = run.q;
   if (q.kind === 'num' && !String(given).length) return;
   run.locked = true;
+  const ms = Math.min(E.TIME_CAP_MS, Math.round(clockStop()));
   const ok = E.checkAnswer(q, given);
   const before = Object.assign({}, data.profile.levels);
   const res = run.program === 'times' ? T.record(data.programs.times, q, ok, E.dayKey()) : E.recordAnswer(data.profile, q.topic, ok, E.dayKey(), q.skill);
+  if (run.program === 'times') T.recordTime(data.programs.times, q, E.dayKey(), ms); else E.recordTime(data.profile, q.topic, E.dayKey(), ms);
+  run.ms += ms;
   if (ok) run.correct++;
   const blk = run.blocks[run.b]; blk.n++; if (ok) blk.ok++; blk.results.push(run.program === 'times' ? { skill: q.skill, ok, gen: q.gen, a: q.meta.a, b: q.meta.b } : { skill: q.skill, ok });
   if (res.event) run.events.push({ topic: q.topic, event: res.event, level: res.level });
-  logAnswer(q, ok, q.kind === 'choice' ? plain(given) : E.fmt(E.parseNumber(given)), before);
+  logAnswer(q, ok, q.kind === 'choice' ? plain(given) : E.fmt(E.parseNumber(given)), before, ms);
 
   if (q.kind === 'choice') {
     document.querySelectorAll('.choice').forEach((b, i) => {

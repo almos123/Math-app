@@ -111,6 +111,8 @@ h1, h2, h3, p { margin: 0; }
 .seg.on { fill: var(--pencil); }
 .poly { fill: var(--pencil-soft); stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
 .vtx { fill: var(--ink); }
+.pm { fill: none; stroke: var(--blue); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.ra { fill: none; stroke: var(--bad, #c0392b); stroke-width: 2.5; stroke-linejoin: miter; }
 .dg { stroke: var(--blue); stroke-width: 2; stroke-dasharray: 5 4; }
 
 .answer { display: grid; gap: 12px; }
@@ -353,7 +355,7 @@ table.t td.n, table.t th.n { direction: ltr; text-align: end; }
 /* כפתור הפעולה הראשי נשאר גלוי בתחתית גם במסכים נמוכים (גלילה בתוך המסך) */
 .dock { position: sticky; bottom: 0; z-index: 3; display: grid; gap: 4px; padding: 10px 0 max(8px, env(safe-area-inset-bottom)); margin-top: auto;
   background: linear-gradient(to top, var(--paper) 78%, transparent); }
-@media (max-height: 700px) {
+@media (max-height: 760px) {
   .screen { gap: 10px; padding-top: max(10px, env(safe-area-inset-top)); padding-bottom: max(10px, env(safe-area-inset-bottom)); }
   .qcard { padding: 12px 14px 14px; gap: 8px; box-shadow: 3px 3px 0 var(--tc, var(--ink)); }
   .qtext { font-size: 18px; line-height: 1.45; }
@@ -367,5 +369,9 @@ table.t td.n, table.t th.n { direction: ltr; text-align: end; }
   .topics li { padding: 6px 10px; } .hint { display: none; }
   .top h1, .who h1 { font-size: 26px; } .today { padding: 10px 14px; gap: 6px; } .today b { font-size: 19px; }
 }
-@media (max-height: 580px) { .pad button { height: 40px; font-size: 20px; } .typed { min-height: 40px; font-size: 24px; } .qprog { display: none; } .st { width: 30px; height: 30px; } .hero { height: 120px; } .hero svg { width: 110px; height: 110px; } }
+@media (max-height: 580px) { .fig svg { max-height: 100px; } .pad button { height: 40px; font-size: 20px; } .typed { min-height: 40px; font-size: 24px; } .qprog { display: none; } .st { width: 30px; height: 30px; } .hero { height: 120px; } .hero svg { width: 110px; height: 110px; } }
 @media (max-width: 340px) { .screen { padding-inline-end: 12px; padding-inline-start: 40px; } .st { width: 28px; height: 28px; font-size: 14px; } .steps { gap: 4px; } .kid-btn { font-size: 24px; padding: 14px; } .code-in { font-size: 24px; } }
+
+.timeblk { background: var(--card); border: 2px dashed var(--ink2); border-radius: 14px; padding: 10px 14px; }
+.timeblk h4 { margin-top: 0; }
+.timeblk p { margin: 6px 0; }
