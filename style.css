@@ -465,7 +465,7 @@ details.prog-sec > summary .sc { margin-inline-start: auto; }
 @media (max-height: 580px) { .hm { display: none; } .top h1 { font-size: 22px; } .pi { width: 38px; height: 38px; } .pi i { font-size: 22px; } .countdown { font-size: 13px; padding: 1px 10px; } }
 
 /* PDF: תצוגה בהירה קבועה, מחוץ למסך */
-.pdfroot { position: fixed; top: 0; inset-inline-start: -10000px; width: 600px; padding: 20px; font-size: 17px; box-sizing: border-box; background: #fff; color: #17254A; font-family: var(--font); line-height: 1.5;
+.pdfroot { position: fixed; top: 0; inset-inline-start: -10000px; width: 520px; padding: 18px; font-size: 18px; box-sizing: border-box; background: #fff; color: #17254A; font-family: var(--font); line-height: 1.5;
   --paper: #fff; --card: #fff; --ink: #17254A; --ink2: #475781; --line: #BFCBE0; --blue: #2F63D6; --ok: #0E6B4C; --bad: #A5321A; --grid: #DCE5F1; --pencil-soft: #FFEFC2; }
 .pdfroot .sc.b1 { background: #FDE5DE !important; } .pdfroot .sc.b2 { background: #FFF1C9 !important; } .pdfroot .sc.b3 { background: #DDF4EA !important; } .pdfroot .sc.b4 { background: #C9ECDD !important; }
 .pdfroot .why { background: #FFF6DF !important; } .pdfroot .how { background: #E9F6EF !important; }
@@ -473,5 +473,5 @@ details.prog-sec > summary .sc { margin-inline-start: auto; }
 .kc-act { display: flex; flex-wrap: wrap; gap: 8px; }
 .pdfroot .chart { max-width: 100%; }
 .pdfroot .kidcard { border: 0; box-shadow: none; padding: 0; background: #fff; } .pdfroot .kc-sum { list-style: none; } .pdfroot summary::-webkit-details-marker { display: none; }
-.pdfroot details { border: 0; } .pdfroot p, .pdfroot li, .pdfroot td, .pdfroot dd, .pdfroot dt { font-size: 17px; } .pdfroot .p-sub { font-size: 15px; } .pdfroot h2 { font-size: 26px; } .pdfroot h3 { font-size: 21px; } .pdfroot h4 { font-size: 18px; }
-.pdfroot .pdf-h { margin-top: 28px; border-top: 3px solid #17254A; padding-top: 14px; } .pdfroot table { font-size: 15px; }
+.pdfroot details { border: 0; } .pdfroot p, .pdfroot li, .pdfroot td, .pdfroot dd, .pdfroot dt { font-size: 18px; } .pdfroot .p-sub { font-size: 16px; } .pdfroot h2 { font-size: 26px; } .pdfroot h3 { font-size: 21px; } .pdfroot h4 { font-size: 18px; }
+.pdfroot .pdf-h { margin-top: 28px; border-top: 3px solid #17254A; padding-top: 14px; } .pdfroot table, .pdfroot .pdf-t { font-size: 16px; } .pdfroot .grid { max-width: 100%; }

@@ -242,32 +242,41 @@ async function makePdf(id, btn) {
     host.querySelectorAll('.kc-act, .kc-sub').forEach(e => e.remove());
     host.querySelectorAll('details').forEach(d => { d.open = true; });
     document.body.appendChild(host);
-    const W = 600, scale = Math.min(2, window.devicePixelRatio || 2);
+    const W = 520, scale = Math.min(2, window.devicePixelRatio || 2);
     const canvas = await window.html2canvas(host, { scale, backgroundColor: '#ffffff', width: W, windowWidth: W, useCORS: true, logging: false });
-    // נקודות חיתוך בין בלוקים, כדי לא לחתוך שורות באמצע
+    // עימוד: חיתוך רק בין בלוקים; כותרות נשארות עם התוכן שאחריהן; תיבות, גרפים וטבלאות לא נחתכים
     const hostTop = host.getBoundingClientRect().top;
-    const cuts = Array.from(host.querySelectorAll('h2, h3, h4, p, li, tr, div, dl > div, details, summary, .focus, .rp-ov, svg.chart, .grid, .bar')).map(el => (el.getBoundingClientRect().bottom - hostTop) * scale).sort((a, b) => a - b);
     const T = el => (el.getBoundingClientRect().top - hostTop) * scale, Bm = el => (el.getBoundingClientRect().bottom - hostTop) * scale;
-    const boxes = Array.from(host.querySelectorAll('.focus, .summary, .rp-ov, .cmp, .scoreblk, .weakl li, .mist li, .recs li, .eng, table, svg.chart, .tbox')).map(el => [T(el), Bm(el)]);
+    const heads = Array.from(host.querySelectorAll('h2, h3, h4, summary, .tb-h, .pdf-h, .rp-ov, thead, .bar')).map(Bm);
+    const cuts = Array.from(host.querySelectorAll('p, li, tr, div, dl > div, details, .focus, svg.chart, .grid')).map(Bm).filter(c => !heads.some(h => Math.abs(h - c) < 3)).sort((x, y) => x - y);
+    const boxes = Array.from(host.querySelectorAll('.focus, .summary, .cmp, .scoreblk, .tb, .timeblk, li, table, svg.chart, .grid, .why, .how, dl')).map(el => [T(el), Bm(el)]);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
-    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), m = 24;
-    const ratio = (pw - 2 * m) / canvas.width, pageH = (ph - 2 * m) / ratio; // גובה עמוד בפיקסלי קנבס
-    let y = 0, first = true;
-    while (y < canvas.height - 2) {
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), m = 26, foot = 22;
+    const ratio = (pw - 2 * m) / canvas.width, pageH = (ph - 2 * m - foot) / ratio; // גובה אזור תוכן בפיקסלי קנבס
+    const ranges = [];
+    for (let y = 0; y < canvas.height - 2;) {
       let end = Math.min(y + pageH, canvas.height);
       if (end < canvas.height) {
-        const ok = cuts.filter(c => c > y + pageH * 0.45 && c <= end && !boxes.some(([t, b]) => c > t + 4 && c < b - 4 && b - t < pageH));
+        const inside = c => boxes.some(([t, b]) => c > t + 3 && c < b - 3 && b - t < pageH * 0.9);
+        const ok = cuts.filter(c => c > y + pageH * 0.3 && c <= end && !inside(c));
         if (ok.length) end = ok[ok.length - 1];
       }
-      const h = Math.max(1, Math.round(end - y));
-      const part = document.createElement('canvas'); part.width = canvas.width; part.height = h;
-      const ctx = part.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, part.width, h);
-      ctx.drawImage(canvas, 0, Math.round(y), canvas.width, h, 0, 0, canvas.width, h);
-      if (!first) pdf.addPage();
-      pdf.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', m, m, canvas.width * ratio, h * ratio);
-      first = false; y += h;
+      end = Math.max(end, y + 1); ranges.push([y, end]); y = end;
     }
+    const N = ranges.length, fam = (getComputedStyle(document.body).fontFamily || 'sans-serif');
+    ranges.forEach(([y0, y1], i) => {
+      const h = Math.round(y1 - y0), part = document.createElement('canvas');
+      part.width = canvas.width; part.height = Math.round(pageH + foot / ratio);
+      const ctx = part.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, part.width, part.height);
+      ctx.drawImage(canvas, 0, Math.round(y0), canvas.width, h, 0, 0, canvas.width, h);
+      ctx.strokeStyle = '#C9D2E8'; ctx.lineWidth = scale; ctx.beginPath(); ctx.moveTo(0, part.height - 24 * scale); ctx.lineTo(part.width, part.height - 24 * scale); ctx.stroke();
+      ctx.fillStyle = '#55607A'; ctx.font = `${13 * scale}px ${fam}`; ctx.direction = 'rtl'; ctx.textAlign = 'right';
+      ctx.fillText(`חשבון יומי · ${row.kid.name} · ${rep.date}`, part.width - 4 * scale, part.height - 7 * scale);
+      ctx.textAlign = 'left'; ctx.fillText(`עמוד ${i + 1} מתוך ${N}`, 4 * scale, part.height - 7 * scale);
+      if (i) pdf.addPage();
+      pdf.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', m, m, canvas.width * ratio, part.height * ratio);
+    });
     const blob = pdf.output('blob'), name = `סיכום-${row.kid.name}-${rep.date}.pdf`;
     const file = new File([blob], name, { type: 'application/pdf' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {

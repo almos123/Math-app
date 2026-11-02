@@ -1,6 +1,6 @@
 // sw.js — מטמון בסיסי כדי שהאפליקציה תיפתח גם בלי חיבור.
 // מעלים את VERSION בכל פעם שמעדכנים קבצים, כדי שהמכשירים יטענו את הגרסה החדשה.
-const VERSION = 'v13';
+const VERSION = 'v14';
 const CACHE = 'math-app-' + VERSION;
 const SHELL = ['./', 'index.html', 'app.js', 'engine.js', 'times.js', 'insights.js', 'ability.js', 'family.js', 'store.js', 'fb.js', 'config.js', 'style.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
