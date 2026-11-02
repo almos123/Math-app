@@ -189,10 +189,10 @@ function reportFile(rep) {
 function openReport(id) {
   const row = lastRows.find(r => r.kid.id === id); if (!row || !row.profile) return;
   const rep = A.buildReport(row.kid, row.profile, { today: E.dayKey() });
-  window.__lastReport = rep;
+  window.__lastReport = rep; rep.kidId = id;
   const m = document.createElement('div');
   m.className = 'modal rmodal'; m.id = 'rmodal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'סיכום להורים');
-  m.innerHTML = `<div class="mbox rbox"><div class="rbar"><button class="btn" data-act="rdownload">הורדת קובץ</button><button class="btn" data-act="rcopy">העתקת טקסט</button><button class="btn" data-act="rshare">שיתוף</button><button class="btn" data-act="rprint">הדפסה / PDF</button><button class="btn" data-act="rclose">סגירה</button></div><p class="p-sub" id="rmsg" role="status"></p>${reportHtml(rep)}</div>`;
+  m.innerHTML = `<div class="mbox rbox"><div class="rbar"><button class="btn" data-act="rdownload">הורדת קובץ</button><button class="btn" data-act="rcopy">העתקת טקסט</button><button class="btn" data-act="rshare">שיתוף</button><button class="btn primary" data-act="rpdf">📤 PDF לשיתוף</button><button class="btn" data-act="rprint">הדפסה</button><button class="btn" data-act="rclose">סגירה</button></div><p class="p-sub" id="rmsg" role="status"></p>${reportHtml(rep)}</div>`;
   app.appendChild(m);
 }
 async function reportAction(act) {
@@ -210,6 +210,86 @@ async function reportAction(act) {
     const blob = new Blob([reportFile(rep)], { type: 'text/html;charset=utf-8' }), url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = `סיכום-${rep.name}-${rep.date}.html`; document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 4000); say('הקובץ הורד. אפשר לפתוח אותו, להדפיס או לשמור כ-PDF.');
+  }
+}
+
+// ---------- PDF לשיתוף ----------
+const loadScript = src => new Promise((res, rej) => {
+  if (document.querySelector(`script[data-lib="${src}"]`)) return res();
+  const s = document.createElement('script'); s.src = src; s.dataset.lib = src; s.onload = () => res(); s.onerror = () => rej(new Error('lib'));
+  document.head.appendChild(s);
+});
+async function loadPdfLibs() {
+  if (!window.html2canvas) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+}
+function resultsHtml(profile) {
+  const prog = (title, days) => {
+    const list = Object.keys(days || {}).filter(k => days[k].answered > 0).sort();
+    if (!list.length) return `<section class="rp"><h3>${title}</h3><p>עוד לא תורגל.</p></section>`;
+    const series = list.map(k => ({ day: k, correct: days[k].correct, answered: days[k].answered, sc: days[k].sc }));
+    const rows = list.slice(-12).reverse().map(k => { const d = days[k];
+      return `<tr><td>${dm(k)}</td><td>${d.answered}</td><td>${pct(d.correct, d.answered)}%</td><td>${d.tn ? I.fmtAvg(d.ms / d.tn) : 'לא זמין'}</td><td>${d.sk || 0}</td><td>${d.part || 0}</td></tr>`; }).join('');
+    return `<section class="rp"><h3>${title}</h3>${chart(series)}<table class="pdf-t"><thead><tr><th>יום</th><th>שאלות</th><th>דיוק</th><th>זמן ממוצע</th><th>דילוגים</th><th>הפסקות</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+  };
+  const xp = profile.programs && profile.programs.times;
+  return `<div class="report"><h2>תוצאות מפורטות</h2>${prog('📝 הכנה למבדק', profile.days)}${prog('✖️ לוח הכפל', xp && xp.days)}</div>`;
+}
+async function makePdf(id, btn) {
+  const row = lastRows.find(r => r.kid.id === id);
+  if (!row || !row.profile) { alert('אין עדיין נתונים להפקת PDF.'); return; }
+  const note = document.getElementById('rmsg');
+  const say = t => { if (note) note.textContent = t; else if (btn) btn.textContent = t; };
+  const label = btn && btn.textContent;
+  if (btn) btn.disabled = true;
+  say('מכין PDF…');
+  let host;
+  try {
+    await loadPdfLibs();
+    if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (e) { /* ignore */ } }
+    const rep = A.buildReport(row.kid, row.profile, { today: E.dayKey() });
+    host = document.createElement('div');
+    host.className = 'pdfroot'; host.setAttribute('dir', 'rtl'); host.setAttribute('aria-hidden', 'true');
+    host.innerHTML = reportHtml(rep) + resultsHtml(row.profile) + `<p class="p-sub note">הופק מ"חשבון יומי" · ${esc(rep.date)}</p>`;
+    document.body.appendChild(host);
+    const W = 760, scale = Math.min(2, window.devicePixelRatio || 2);
+    const canvas = await window.html2canvas(host, { scale, backgroundColor: '#ffffff', width: W, windowWidth: W, useCORS: true, logging: false });
+    // נקודות חיתוך בין בלוקים, כדי לא לחתוך שורות באמצע
+    const hostTop = host.getBoundingClientRect().top;
+    const cuts = Array.from(host.querySelectorAll('h2, h3, h4, p, li, tr, .focus, .rp-ov, svg.chart')).map(el => (el.getBoundingClientRect().bottom - hostTop) * scale).sort((a, b) => a - b);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), m = 28;
+    const ratio = (pw - 2 * m) / canvas.width, pageH = (ph - 2 * m) / ratio; // גובה עמוד בפיקסלי קנבס
+    let y = 0, first = true;
+    while (y < canvas.height - 2) {
+      let end = Math.min(y + pageH, canvas.height);
+      if (end < canvas.height) {
+        const ok = cuts.filter(c => c > y + pageH * 0.45 && c <= end);
+        if (ok.length) end = ok[ok.length - 1];
+      }
+      const h = Math.max(1, Math.round(end - y));
+      const part = document.createElement('canvas'); part.width = canvas.width; part.height = h;
+      const ctx = part.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, part.width, h);
+      ctx.drawImage(canvas, 0, Math.round(y), canvas.width, h, 0, 0, canvas.width, h);
+      if (!first) pdf.addPage();
+      pdf.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', m, m, canvas.width * ratio, h * ratio);
+      first = false; y += h;
+    }
+    const blob = pdf.output('blob'), name = `סיכום-${row.kid.name}-${rep.date}.pdf`;
+    const file = new File([blob], name, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: `סיכום יכולות: ${row.kid.name}` }); say('ה-PDF מוכן.'); return; }
+      catch (e) { if (e && e.name === 'AbortError') { say(''); return; } }
+    }
+    const url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 8000); say('ה-PDF הורד למכשיר.');
+  } catch (e) {
+    console.warn(e); say('לא הצלחתי להפיק PDF (נדרש חיבור לאינטרנט). אפשר להשתמש ב"הדפסה" ולשמור כ-PDF.');
+  } finally {
+    if (host) host.remove();
+    if (btn) { btn.disabled = false; if (label && !note) setTimeout(() => { btn.textContent = label; }, 2500); }
   }
 }
 
@@ -235,7 +315,7 @@ function kidCard(r) {
   return `<details class="kidcard" data-open-key="${esc(key)}"${isOpen(key) ? ' open' : ''}>
     <summary class="kc-sum"><h2 class="kc-name">${esc(kid.emoji || '')} ${esc(kid.name)}</h2>${scoreChip(ov.score, 'ציון כללי')}<span class="p-sub kc-sub">${ov.score !== null ? `ציון כללי · ${esc(ov.band)}` : 'ציון כללי: לא זמין'}${lastDay ? ` · תרגול אחרון: ${since === 0 ? 'היום' : since === 1 ? 'אתמול' : dm(lastDay)}` : ''}${profile.streak ? ` · ${profile.streak} ${profile.streak === 1 ? 'יום' : 'ימים'} ברצף` : ''}</span></summary>
     ${since !== null && since >= 2 ? `<p class="warn">לא ${f ? 'תרגלה' : 'תרגל'} ${since} ימים (מאז ${dm(lastDay)}).</p>` : ''}
-    <div class="kc-act"><button class="btn" data-act="report" data-id="${esc(kid.id)}">📄 סיכום להורים: חוזקות, קשיים והמלצות</button></div>
+    <div class="kc-act"><button class="btn" data-act="report" data-id="${esc(kid.id)}">📄 סיכום להורים: חוזקות, קשיים והמלצות</button><button class="btn primary" data-act="pdf" data-id="${esc(kid.id)}">📤 PDF לשיתוף</button></div>
     ${dayList.length ? testHtml : `<details class="prog-sec" open><summary><span class="st-t">📝 הכנה למבדק</span>${scoreChip(null)}</summary><p class="empty">עוד לא התחיל${f ? 'ה' : ''} את ההכנה למבדק.</p></details>`}
     ${xList.length ? timesSection(kid, xp, today) : `<details class="prog-sec" open><summary><span class="st-t">✖️ לוח הכפל</span>${scoreChip(null)}</summary><p class="empty">עוד לא ${f ? 'תרגלה' : 'תרגל'} את לוח הכפל.</p></details>`}
     <details class="prog-sec"><summary><span class="st-t">טעויות אחרונות (${mistakes.length})</span></summary>${mist}</details>
@@ -369,6 +449,8 @@ app.addEventListener('click', async e => {
   const act = b.dataset.act;
   if (act === 'refresh') { if (user) fam = null; return load(); }
   if (act === 'report') return openReport(b.dataset.id);
+  if (act === 'pdf') return makePdf(b.dataset.id, b);
+  if (act === 'rpdf') return makePdf(window.__lastReport && window.__lastReport.kidId, b);
   if (/^r(download|copy|share|print|close)$/.test(act)) return reportAction(act);
   if (act === 'openall' || act === 'closeall') {
     const open = act === 'openall', c = readClosed();
