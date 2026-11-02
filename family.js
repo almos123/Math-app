@@ -28,10 +28,12 @@ export async function listFamilies(user) {
   const { db, fs } = await loadFirebase();
   const email = (user.email || '').toLowerCase();
   const col = fs.collection(db, 'families');
-  const mine = await fs.getDocs(fs.query(col, fs.where('parentUids', 'array-contains', user.uid)));
+  const [mine, inv] = await Promise.all([
+    fs.getDocs(fs.query(col, fs.where('parentUids', 'array-contains', user.uid))),
+    fs.getDocs(fs.query(col, fs.where('invitedEmails', 'array-contains', email))),
+  ]);
   const out = new Map(mine.docs.map(d => [d.id, Object.assign({ code: d.id }, d.data())]));
   // הזמנות שממתינות לחשבון הזה: מצטרפים אוטומטית כהורה נוסף
-  const inv = await fs.getDocs(fs.query(col, fs.where('invitedEmails', 'array-contains', email)));
   for (const d of inv.docs) {
     if (out.has(d.id)) continue;
     const f = d.data();

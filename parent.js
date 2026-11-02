@@ -28,19 +28,19 @@ function fromLocal() {
 }
 async function fromRemote(code, roster) {
   const { db, fs } = await loadFirebase();
-  const out = [];
-  for (const k of roster) {
-    const snap = await fs.getDoc(fs.doc(db, 'families', code, 'kids', k.id));
+  return Promise.all(roster.map(async k => {
+    const [snap, qs] = await Promise.all([
+      fs.getDoc(fs.doc(db, 'families', code, 'kids', k.id)),
+      fs.getDocs(fs.query(fs.collection(db, 'families', code, 'kids', k.id, 'sessions'), fs.orderBy('date', 'desc'), fs.limit(14))).catch(() => null),
+    ]);
     const profile = snap.exists() ? snap.data() : null;
-    let sessions = [];
-    if (profile) {
-      const qs = await fs.getDocs(fs.query(fs.collection(db, 'families', code, 'kids', k.id, 'sessions'), fs.orderBy('date', 'desc'), fs.limit(14)));
-      sessions = qs.docs.map(d => d.data());
-    }
-    out.push({ kid: k, profile, sessions });
-  }
-  return out;
+    return { kid: k, profile, sessions: profile && qs ? qs.docs.map(d => d.data()) : [] };
+  }));
 }
+// מטמון תצוגה אחרונה (במכשיר ההורה בלבד): מציג מיד, ומתרענן ברקע
+const CK = 'mathapp:parent:cache';
+const readCache = () => { try { return JSON.parse(localStorage.getItem(CK) || 'null'); } catch (e) { return null; } };
+const writeCache = v => { try { localStorage.setItem(CK, JSON.stringify(v)); } catch (e) { /* ignore */ } };
 
 // ---------- רכיבים ----------
 function chart(days, mode) { // דיוק יומי (ברירת מחדל) או ציון יכולת (mode='score') — סדרה אחת, קו דק, תווית רק לערך האחרון
@@ -321,25 +321,32 @@ async function load() {
     renderDash(fromLocal(), '<b>מצב מקומי:</b> מוצגים רק נתונים ששמורים במכשיר הזה. כדי לראות את התוצאות מהטלפונים של הילדים, יש להשלים את הגדרת Firebase (README, שלב 2).', false);
     return;
   }
-  app.innerHTML = '<main class="p-wrap"><p>טוען…</p></main>';
+  const cached = user && readCache();
+  if (cached && cached.uid === user.uid && !fam) {
+    fam = cached.fam;
+    renderDash(cached.rows, `מוצגים נתונים מהביקור הקודם (${new Date(cached.t).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}) · מרענן…`, true);
+    fam = null; // המשפחה והרשאות נבדקות מחדש מול השרת
+  } else if (!document.querySelector('.p-wrap .p-head')) app.innerHTML = '<main class="p-wrap"><p>טוען…</p></main>';
   try {
     if (!fam) {
       const list = await listFamilies(user);
       fam = list[0] || null;
     }
     if (!fam) {
+      try { localStorage.removeItem(CK); } catch (e) { /* ignore */ }
       renderGate('ברוכים הבאים', 'עוד אין משפחה בחשבון הזה. יוצרים משפחה, מוסיפים ילדים, ומוסרים לכל ילד את קוד המשפחה.', { act: 'create', label: 'יצירת משפחה' });
       return;
     }
     const rows = await fromRemote(fam.code, fam.roster || []);
     fam.roster = fam.roster || [];
     renderDash(rows, `מעודכן ${new Date().toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' })}`, true);
+    writeCache({ uid: user.uid, t: Date.now(), fam, rows });
   } catch (e) {
     console.warn(e);
     renderGate('לא הצלחתי לטעון נתונים', 'בדקו חיבור לאינטרנט ושכללי האבטחה (firestore.rules) פורסמו.', { act: 'refresh', label: 'ניסיון נוסף' });
   }
 }
-async function reloadFamily() { fam = null; await load(); }
+async function reloadFamily() { fam = null; try { localStorage.removeItem(CK); } catch (e) { /* ignore */ } await load(); }
 
 async function start() {
   if (!firebaseConfigured()) return load();
