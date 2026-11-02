@@ -223,18 +223,6 @@ async function loadPdfLibs() {
   if (!window.html2canvas) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
   if (!window.jspdf) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
 }
-function resultsHtml(profile) {
-  const prog = (title, days) => {
-    const list = Object.keys(days || {}).filter(k => days[k].answered > 0).sort();
-    if (!list.length) return `<section class="rp"><h3>${title}</h3><p>עוד לא תורגל.</p></section>`;
-    const series = list.map(k => ({ day: k, correct: days[k].correct, answered: days[k].answered, sc: days[k].sc }));
-    const rows = list.slice(-12).reverse().map(k => { const d = days[k];
-      return `<tr><td>${dm(k)}</td><td>${d.answered}</td><td>${pct(d.correct, d.answered)}%</td><td>${d.tn ? I.fmtAvg(d.ms / d.tn) : 'לא זמין'}</td><td>${d.sk || 0}</td><td>${d.part || 0}</td></tr>`; }).join('');
-    return `<section class="rp"><h3>${title}</h3>${chart(series)}<table class="pdf-t"><thead><tr><th>יום</th><th>שאלות</th><th>דיוק</th><th>זמן ממוצע</th><th>דילוגים</th><th>הפסקות</th></tr></thead><tbody>${rows}</tbody></table></section>`;
-  };
-  const xp = profile.programs && profile.programs.times;
-  return `<div class="report"><h2>תוצאות מפורטות</h2>${prog('📝 הכנה למבדק', profile.days)}${prog('✖️ לוח הכפל', xp && xp.days)}</div>`;
-}
 async function makePdf(id, btn) {
   const row = lastRows.find(r => r.kid.id === id);
   if (!row || !row.profile) { alert('אין עדיין נתונים להפקת PDF.'); return; }
@@ -250,22 +238,26 @@ async function makePdf(id, btn) {
     const rep = A.buildReport(row.kid, row.profile, { today: E.dayKey() });
     host = document.createElement('div');
     host.className = 'pdfroot'; host.setAttribute('dir', 'rtl'); host.setAttribute('aria-hidden', 'true');
-    host.innerHTML = reportHtml(rep) + resultsHtml(row.profile) + `<p class="p-sub note">הופק מ"חשבון יומי" · ${esc(rep.date)}</p>`;
+    host.innerHTML = reportHtml(rep) + `<div class="pdf-full"><h2 class="pdf-h">כל התוצאות</h2>${kidCard(row)}</div>` + `<p class="p-sub note">הופק מ"חשבון יומי" · ${esc(rep.date)}</p>`;
+    host.querySelectorAll('.kc-act, .kc-sub').forEach(e => e.remove());
+    host.querySelectorAll('details').forEach(d => { d.open = true; });
     document.body.appendChild(host);
-    const W = 760, scale = Math.min(2, window.devicePixelRatio || 2);
+    const W = 600, scale = Math.min(2, window.devicePixelRatio || 2);
     const canvas = await window.html2canvas(host, { scale, backgroundColor: '#ffffff', width: W, windowWidth: W, useCORS: true, logging: false });
     // נקודות חיתוך בין בלוקים, כדי לא לחתוך שורות באמצע
     const hostTop = host.getBoundingClientRect().top;
-    const cuts = Array.from(host.querySelectorAll('h2, h3, h4, p, li, tr, .focus, .rp-ov, svg.chart')).map(el => (el.getBoundingClientRect().bottom - hostTop) * scale).sort((a, b) => a - b);
+    const cuts = Array.from(host.querySelectorAll('h2, h3, h4, p, li, tr, div, dl > div, details, summary, .focus, .rp-ov, svg.chart, .grid, .bar')).map(el => (el.getBoundingClientRect().bottom - hostTop) * scale).sort((a, b) => a - b);
+    const T = el => (el.getBoundingClientRect().top - hostTop) * scale, Bm = el => (el.getBoundingClientRect().bottom - hostTop) * scale;
+    const boxes = Array.from(host.querySelectorAll('.focus, .summary, .rp-ov, .cmp, .scoreblk, .weakl li, .mist li, .recs li, .eng, table, svg.chart, .tbox')).map(el => [T(el), Bm(el)]);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'pt', format: 'a4', compress: true });
-    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), m = 28;
+    const pw = pdf.internal.pageSize.getWidth(), ph = pdf.internal.pageSize.getHeight(), m = 24;
     const ratio = (pw - 2 * m) / canvas.width, pageH = (ph - 2 * m) / ratio; // גובה עמוד בפיקסלי קנבס
     let y = 0, first = true;
     while (y < canvas.height - 2) {
       let end = Math.min(y + pageH, canvas.height);
       if (end < canvas.height) {
-        const ok = cuts.filter(c => c > y + pageH * 0.45 && c <= end);
+        const ok = cuts.filter(c => c > y + pageH * 0.45 && c <= end && !boxes.some(([t, b]) => c > t + 4 && c < b - 4 && b - t < pageH));
         if (ok.length) end = ok[ok.length - 1];
       }
       const h = Math.max(1, Math.round(end - y));
