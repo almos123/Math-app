@@ -46,14 +46,22 @@
     return res;
   }
   // זמן: ליום ולנושא (במנוע הראשי), ולכל תרגיל בנפרד. יומן סבבים (30 אחרונים) לצפייה של ההורה בלבד.
-  function recordTime(profile, q, day, ms) {
-    const m = E.recordTime(profile, ID, day, ms);
+  function recordTime(profile, q, day, ms, correct) {
+    const m = E.recordTime(profile, ID, day, ms, correct);
     const f = profile.facts[q.fact] || (profile.facts[q.fact] = { n: 0, c: 0, r: '' });
     f.ms = (f.ms || 0) + m; f.t = (f.t || 0) + 1;
     return m;
   }
+  function recordSkip(profile, q, day) {
+    E.recordSkip(profile, ID, day, q.skill);
+    const f = profile.facts[q.fact] || (profile.facts[q.fact] = { n: 0, c: 0, r: '' });
+    f.sk = (f.sk || 0) + 1;
+  }
   function logRound(profile, day, info) {
-    profile.rlog = (profile.rlog || []).concat([{ d: day, n: info.n, ok: info.ok, ms: Math.round(info.ms), lv: info.lv }]).slice(-30);
+    const e = { d: day, n: info.n, ok: info.ok, ms: Math.round(info.ms), lv: info.lv };
+    if (info.sk) e.sk = info.sk;
+    if (info.partial) e.p = 1; // סבב שהופסק באמצע
+    profile.rlog = (profile.rlog || []).concat([e]).slice(-30);
   }
   function factStatus(f) {
     if (!f || !f.n) return 'new';
@@ -170,6 +178,6 @@
     return n;
   }
 
-  return { ID, PER_SESSION, MAX_LEVEL, TABLES, LEVEL_INFO, MIX, DIVISION_FROM, factKey, newProfile, ensureProfile, record, recordFact, recordTime, logRound, factStatus,
+  return { ID, PER_SESSION, MAX_LEVEL, TABLES, LEVEL_INFO, MIX, DIVISION_FROM, factKey, newProfile, ensureProfile, record, recordFact, recordTime, recordSkip, logRound, factStatus,
     generateQuestion, seenKey, checkAnswer, strategy, arraySvg, allFacts, weakFacts, tableStats, streakAny };
 });

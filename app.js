@@ -2,7 +2,7 @@
 import { getFamily, joinFamily, refreshFamily, leaveFamily, loadKid, saveKid, restoreKid, onStatus, getStatus, syncNow } from './store.js';
 import { normCode, showCode } from './family.js';
 
-const E = window.MathEngine, I = window.Insights, T = window.TimesEngine;
+const E = window.MathEngine, I = window.Insights, T = window.TimesEngine, A = window.Ability;
 const app = document.getElementById('app');
 const ME = 'mathapp:v2:me';
 
@@ -112,6 +112,26 @@ function confetti(n) {
     `<i style="--x:${Math.round(Math.random() * 100)}%;--d:${(Math.random() * 1.2).toFixed(2)}s;--t:${(2.2 + Math.random() * 1.6).toFixed(2)}s;--c:${cols[i % cols.length]};--r:${Math.round(Math.random() * 360)}deg"></i>`).join('')}</div>`;
 }
 
+// ---------- דמות: "ספרון", דמות מקורית שמלווה את הילד. מצב רוח: happy | cheer | think | oops ----------
+function mascot(mood) {
+  const eyes = mood === 'cheer'
+    ? '<path class="mk" d="M33 47 Q39 39 45 47 M55 47 Q61 39 67 47" fill="none"/>'
+    : mood === 'oops'
+      ? '<circle cx="39" cy="47" r="6.5" fill="#fff"/><circle cx="61" cy="47" r="6.5" fill="#fff"/><circle cx="40" cy="49" r="3.2" fill="#1B2A4A"/><circle cx="62" cy="49" r="3.2" fill="#1B2A4A"/>'
+      : '<circle cx="39" cy="47" r="6.5" fill="#fff"/><circle cx="61" cy="47" r="6.5" fill="#fff"/><circle cx="40" cy="46" r="3.2" fill="#1B2A4A"/><circle cx="62" cy="46" r="3.2" fill="#1B2A4A"/>';
+  const mouth = mood === 'cheer' ? '<path d="M38 60 Q50 80 62 60 Z" fill="#1B2A4A"/><path d="M44 68 Q50 74 56 68 Q50 65 44 68Z" fill="#FF8FA3"/>'
+    : mood === 'think' ? '<path class="mk" d="M42 66 L58 66" fill="none"/><path class="mk" d="M54 38 L66 35" fill="none"/>'
+    : mood === 'oops' ? '<ellipse cx="50" cy="67" rx="4.5" ry="5" fill="#1B2A4A"/>'
+    : '<path class="mk" d="M38 62 Q50 74 62 62" fill="none"/>';
+  const arms = mood === 'cheer' ? '<path class="mk arm" d="M20 60 Q8 44 14 32 M80 60 Q92 44 86 32" fill="none"/>' : '<path class="mk arm" d="M20 64 Q12 70 15 78 M80 64 Q88 70 85 78" fill="none"/>';
+  return `<svg class="mascot ${mood}" viewBox="0 0 100 100" role="img" aria-label="ספרון, הדמות שמתרגלת איתך" focusable="false">
+    <g class="ant"><path class="mk" d="M50 24 L50 11" fill="none"/><path class="star" d="M50 2 L52.6 7.4 L58.6 8.2 L54.2 12.3 L55.3 18.2 L50 15.4 L44.7 18.2 L45.8 12.3 L41.4 8.2 L47.4 7.4Z"/></g>
+    <ellipse class="bd" cx="50" cy="56" rx="33" ry="31"/><ellipse class="bl" cx="50" cy="66" rx="19" ry="14"/>
+    ${arms}${eyes}<circle cx="29" cy="58" r="5" fill="#FF8FA3" opacity=".55"/><circle cx="71" cy="58" r="5" fill="#FF8FA3" opacity=".55"/>${mouth}
+    <ellipse class="ft" cx="38" cy="87" rx="9" ry="4.5"/><ellipse class="ft" cx="62" cy="87" rx="9" ry="4.5"/></svg>`;
+}
+const OOPS = ['לא נורא, לומדים מזה', 'כמעט! נסו שוב בפעם הבאה', 'כל טעות מלמדת משהו'];
+
 // ---------- מסכים ----------
 function viewCode(err) {
   view = 'code';
@@ -160,10 +180,12 @@ function viewHome() {
   const answered = dt.answered + dx.answered, rounds = (dt.rounds || 0) + (dx.rounds || 0);
   const goal = Math.min(1, Math.max(dt.answered / E.ROUND_MIN, dx.answered / T.PER_SESSION));
   const lvX = xp.levels.times;
+  const sumSt = pr => Object.keys(pr.days || {}).reduce((s, d) => s + (pr.days[d].st || 0), 0), totalStars = sumSt(tp) + sumSt(xp);
   const labT = (dt.rounds || 0) > 0 ? 'סבב נוסף' : dt.answered > 0 ? 'ממשיכים' : 'מתחילים';
   const labX = (dx.rounds || 0) > 0 ? 'עוד תרגול' : 'מתחילים';
   app.innerHTML = `<main class="screen">
-    <div class="top"><h1>שלום ${esc(kid.name)} ${esc(kid.emoji || '')}</h1><button class="link" data-act="switch">לא ${esc(kid.name)}?</button></div>
+    <div class="top"><div class="greet"><div class="hm" aria-hidden="true">${mascot('happy')}</div><div><h1>שלום ${esc(kid.name)} ${esc(kid.emoji || '')}</h1><p class="ev">${esc(g('מוכן', 'מוכנה'))} להרפתקה של היום?</p></div></div><button class="link" data-act="switch">לא ${esc(kid.name)}?</button></div>
+    <div class="chips" aria-label="הישגים"><span class="chip-s" aria-label="${totalStars} כוכבים">⭐ <b>${totalStars}</b></span>${streak > 0 ? `<span class="chip-s fire" aria-label="${streak} ימים ברצף">🔥 <b>${streak}</b></span>` : ''}</div>
     <section class="today" aria-label="תרגול היום">
       <div class="row"><span>היום</span><b>${answered} שאלות${rounds ? ` · ${rounds} ${rounds === 1 ? 'סבב' : 'סבבים'}` : ''}</b></div>
       <div class="goalbar" aria-hidden="true"><i style="width:${Math.round(goal * 100)}%"></i></div>
@@ -171,13 +193,13 @@ function viewHome() {
     </section>
     <p class="lead pick">מה מתרגלים?</p>
     <section class="prog t-test" aria-label="הכנה למבדק">
-      <div class="ph"><span class="pi" aria-hidden="true">📝</span><div><h2>הכנה למבדק</h2><p class="ev">5 נושאים, 3 עד 5 שאלות בכל נושא</p></div></div>
+      <div class="ph"><span class="pi" aria-hidden="true"><i>📝</i><b class="fl f1">➕</b><b class="fl f2">🔷</b><b class="fl f3">🍕</b></span><div><h2>הכנה למבדק</h2><p class="ev">5 נושאים, 3 עד 5 שאלות בכל נושא</p></div></div>
       ${cd ? `<div class="countdown">${esc(cd)}</div>` : ''}
       <ul class="minilv" aria-label="רמות לפי נושא">${E.TOPICS.map(t => `<li aria-label="${esc(t.short)}, רמה ${tp.levels[t.id]}"><span aria-hidden="true">${t.icon}</span><b>${tp.levels[t.id]}</b></li>`).join('')}</ul>
       <button class="btn primary big" data-act="start" data-program="test">${labT}</button>
     </section>
     <section class="prog t-times" aria-label="לוח הכפל">
-      <div class="ph"><span class="pi" aria-hidden="true">✖️</span><div><h2>לוח הכפל</h2><p class="ev">10 שאלות, עד 100${lvX >= T.DIVISION_FROM ? ', כולל חילוק' : ''}</p></div></div>
+      <div class="ph"><span class="pi" aria-hidden="true"><i>✖️</i><b class="fl f1">7</b><b class="fl f2">🐸</b><b class="fl f3">9</b></span><div><h2>לוח הכפל</h2><p class="ev">10 שאלות, עד 100${lvX >= T.DIVISION_FROM ? ', כולל חילוק' : ''}</p></div></div>
       <div class="lvrow"><span class="pips" aria-hidden="true">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= lvX ? 'on' : ''}"></i>`).join('')}</span><span class="ev">רמה ${lvX} · ${E.LEVEL_NAMES[lvX]}: ${T.LEVEL_INFO[lvX]}</span></div>
       <button class="btn primary big" data-act="start" data-program="times">${labX}</button>
     </section>
@@ -228,9 +250,9 @@ function viewQuiz() {
   }
   app.innerHTML = `<main class="screen t-${t.id}">
     <div class="qhead"><button class="x" data-act="quit" aria-label="חזרה למסך הבית">✕</button>${stepsHtml()}<span class="lvlchip">רמה ${q.level}</span></div>
-    <div class="qprog"><span>שאלה ${run.qi + 1} מתוך ${b.count}</span><div class="dots" aria-hidden="true">${dots}</div></div>
+    <div class="qprog"><span>שאלה ${run.qi + 1} מתוך ${b.count}${run.skipped.length ? ` · ${run.skipped.length} ${run.skipped.length === 1 ? 'שאלה תחזור' : 'שאלות יחזרו'} בסוף` : ''}</span><div class="dots" aria-hidden="true">${dots}</div></div>
     <section class="qcard">
-      <div class="tp"><span class="tic" aria-hidden="true">${t.icon}</span> ${esc(t.short)}</div>
+      <div class="tp"><span class="tic" aria-hidden="true">${t.icon}</span> ${esc(t.short)}${q.retried ? '<span class="retag">שאלה שדילגת עליה</span>' : ''}${q.retried ? '' : '<button class="skipbtn" data-act="skip" aria-label="דילוג על השאלה, היא תחזור בסוף">דלג ↷</button>'}</div>
       <p class="qtext">${rich(q.text)}</p>
       ${q.eq ? `<div class="eq ${eqSize(q.eq)}">${eqHtml(q.eq)}</div>` : ''}
       ${q.svg ? `<div class="fig">${q.svg}</div>` : ''}
@@ -242,22 +264,28 @@ function viewQuiz() {
 
 function viewDone() {
   view = 'done';
-  const total = run.blocks.reduce((a, b) => a + b.n, 0), ok = run.correct;
+  const blocks = run.blocks.filter(b => b.n > 0);
+  const total = blocks.reduce((a, b) => a + b.n, 0), ok = run.correct;
   const fb = run.fb;
   const evFor = id => {
     const ev = run.events.filter(e => e.topic === id), up = ev.filter(e => e.event === 'up').length, dn = ev.length - up;
     return [up ? `↑ עלית ${up === 1 ? 'רמה' : up + ' רמות'}` : '', dn ? '↓ חוזרים צעד לחיזוק' : ''].filter(Boolean).join(', ');
   };
   const good = ok / total >= 0.7;
+  const left = run.skipped.length, back = run.skips - left;
+  const skipLine = run.skips ? `<p class="closing">${back > 0 ? `דילגת על ${run.skips} ${run.skips === 1 ? 'שאלה' : 'שאלות'} וחזרת ${back === 1 ? 'אליה' : 'אליהן'} בסוף. זו דרך חכמה להתמודד עם שאלה קשה.` : `דילגת על ${run.skips} ${run.skips === 1 ? 'שאלה' : 'שאלות'}. בפעם הבאה אפשר לנסות גם אותן.`}</p>` : '';
   app.innerHTML = `<main class="screen done">
-    ${confetti(good ? 30 : 8)}
+    ${confetti(good ? 34 : 8)}
     <div class="medal" aria-hidden="true">${ok / total >= 0.9 ? '🏆' : good ? '🌟' : '💪'}</div>
-    <h1>${esc(fb.title)}</h1>
+    <div class="dmasc">${mascot(good ? 'cheer' : 'happy')}</div>
+    <h1>${esc(run.partial ? 'עצרת באמצע, ויפה שהתחלת' : fb.title)}</h1>
     <div class="score">${ok} <small>מתוך ${total}</small></div>
+    <p class="stars-row" aria-label="${run.stars} כוכבים בתרגול הזה">${Array.from({ length: Math.min(run.stars, 25) }, (_, i) => `<i style="--i:${i}">⭐</i>`).join('')}<b>${run.stars ? `${run.stars} כוכבים` : ''}</b></p>
     <section class="fb good"><h2>מה היה טוב</h2><ul>${fb.praise.map(p => `<li>${esc(p)}</li>`).join('')}</ul></section>
     ${fb.improve.length ? `<section class="fb tip"><h2>איך משתפרים</h2><ul>${fb.improve.map(p => `<li>${esc(p)}</li>`).join('')}</ul></section>` : ''}
-    <p class="closing">${esc(fb.closing.join(' '))}</p>
-    <ul class="sum">${run.blocks.map(b => { const t = topicOf(b.id), lv = levelOf(b.id); return `<li class="t-${t.id}"><span aria-hidden="true">${t.icon}</span><span>${esc(t.short)}<br><span class="ev">רמה ${lv} · ${E.LEVEL_NAMES[lv]} ${evFor(b.id)}</span></span><span class="res">${b.ok} מתוך ${b.n}</span></li>`; }).join('')}</ul>
+    <p class="closing">${esc(run.partial ? 'אפשר להמשיך בפעם אחרת. מה שענית נשמר.' : fb.closing.join(' '))}</p>
+    ${skipLine}
+    <ul class="sum">${blocks.map(b => { const t = topicOf(b.id), lv = levelOf(b.id); return `<li class="t-${t.id}"><span aria-hidden="true">${t.icon}</span><span>${esc(t.short)}<br><span class="ev">רמה ${lv} · ${E.LEVEL_NAMES[lv]} ${evFor(b.id)}</span></span><span class="res">${b.ok} מתוך ${b.n}</span></li>`; }).join('')}</ul>
     <div class="spacer"></div>
     <button class="btn primary big" data-act="start" data-program="${run.program}">${run.program === 'times' ? 'עוד תרגול' : 'עוד סבב'}</button>
     <button class="btn big" data-act="home">סיום</button>
@@ -267,6 +295,8 @@ function viewDone() {
 // ---------- שעון נסתר: מודד זמן תשובה בלי להציג אותו לילד. נעצר כשהאפליקציה ברקע ----------
 const clock = { t0: 0, acc: 0, on: false, paused: false };
 function clockStart() { clock.acc = 0; clock.t0 = performance.now(); clock.on = true; clock.paused = false; }
+function clockPause() { if (clock.on) { clock.acc += performance.now() - clock.t0; clock.on = false; } }
+function clockResume() { if (!clock.on) { clock.t0 = performance.now(); clock.on = true; } }
 function clockStop() { if (clock.on) { clock.acc += performance.now() - clock.t0; clock.on = false; } clock.paused = false; return clock.acc; }
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { if (clock.on) { clock.acc += performance.now() - clock.t0; clock.on = false; clock.paused = true; } }
@@ -279,8 +309,8 @@ function startRun(program) {
   const rng = E.mulberry32((Date.now() ^ 0x5bd1e995) >>> 0);
   const plan = program === 'times' ? [{ topic: 'times', count: T.PER_SESSION }] : E.planRound(data.profile, rng);
   run = {
-    program, rng, plan, b: 0, qi: 0, correct: 0, ms: 0, seen: new Set(), events: [], typed: '', locked: false, q: null, fb: null,
-    blocks: plan.map(p => ({ id: p.topic, n: 0, ok: 0, levelBefore: levelOf(p.topic), levelAfter: levelOf(p.topic), results: [] })),
+    program, rng, plan, b: 0, qi: 0, correct: 0, ms: 0, stars: 0, skips: 0, fresh: 0, skipped: [], partial: false, seen: new Set(), events: [], typed: '', locked: false, q: null, fb: null,
+    blocks: plan.map(p => ({ id: p.topic, n: 0, ok: 0, sk: 0, levelBefore: levelOf(p.topic), levelAfter: levelOf(p.topic), results: [] })),
   };
   viewIntro();
 }
@@ -288,14 +318,17 @@ function nextQ() {
   const b = run.plan[run.b];
   if (run.qi >= b.count) {
     run.blocks[run.b].levelAfter = levelOf(b.topic);
-    run.b++; run.qi = 0;
+    run.b++; run.qi = 0; run.fresh = 0; run.skipped = [];
     return run.b >= run.plan.length ? finishRound() : viewIntro();
   }
   const topic = b.topic;
   let q;
-  if (run.program === 'times') {
+  if (run.fresh >= b.count && run.skipped.length) {
+    q = run.skipped.shift(); // שאלה שדילגו עליה חוזרת בסוף אותו חלק (ואי אפשר לדלג עליה שוב)
+  } else if (run.program === 'times') {
     q = T.generateQuestion(data.programs.times, levelOf('times'), run.rng, run.seen);
     run.seen.add(T.seenKey(q)); run.seen.add('f:' + q.fact); // לוח הכפל: חזרה בין סבבים רצויה, ולכן בלי "recent"
+    run.fresh++;
   } else {
     for (let t = 0; t < 20; t++) {
       q = E.generateQuestion(topic, data.profile.levels[topic], run.rng);
@@ -304,32 +337,91 @@ function nextQ() {
     }
     const k = E.qKey(q);
     run.seen.add(k); data.recent.push(k);
+    run.fresh++;
   }
   run.q = q; run.typed = ''; run.locked = false;
   viewQuiz(); clockStart();
 }
-function finishRound() {
+// דילוג: השאלה לא נספרת כתשובה, חוזרת בסוף אותו חלק, ונרשמת להורה
+function skipQ() {
+  if (!run || !run.q || run.locked || run.q.retried) return;
+  const q = run.q, day = E.dayKey();
+  clockStop();
+  q.retried = true;
+  if (run.program === 'times') T.recordSkip(data.programs.times, q, day); else E.recordSkip(data.profile, q.topic, day, q.skill);
+  const s = sessionOf(day), bt = s.byTopic[q.topic] || (s.byTopic[q.topic] = { answered: 0, correct: 0 });
+  bt.sk = (bt.sk || 0) + 1;
+  run.blocks[run.b].sk++; run.skips++;
+  run.skipped.push(q);
+  saveKid(kid.id, data, day);
+  nextQ();
+}
+function answeredCount() { return run ? run.blocks.reduce((a, b) => a + b.n, 0) : 0; }
+function openStop() {
+  if (!run) return viewHome();
+  if (answeredCount() === 0) return viewHome();
+  clockPause();
+  const n = answeredCount();
+  const m = document.createElement('div');
+  m.className = 'modal'; m.id = 'modal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'סיום התרגול');
+  m.innerHTML = `<div class="mbox">${mascot('think')}<h2>רוצים לסיים עכשיו?</h2><p>עד עכשיו ענית על ${n} ${n === 1 ? 'שאלה' : 'שאלות'}. אפשר להמשיך, או לסיים ולראות סיכום. מה שענית כבר נשמר.</p>
+    <button class="btn primary big" data-act="resume">להמשיך לתרגל</button><button class="btn big" data-act="finish">לסיים ולראות סיכום</button><button class="link" data-act="exit">לצאת בלי סיכום</button></div>`;
+  app.appendChild(m);
+  const f = m.querySelector('[data-act="resume"]'); if (f) f.focus();
+}
+function closeStop() { const m = document.getElementById('modal'); if (m) m.remove(); }
+function stopRun(showSummary) {
+  closeStop();
+  const n = answeredCount();
+  if (n === 0) return viewHome();
+  run.partial = true;
+  if (showSummary) finishRound(true); else { recordPartial(); viewHome(); }
+}
+function recordPartial() {
+  const day = E.dayKey(), prof = profileOf(run.program), n = answeredCount();
+  E.recordPartial(prof, day, n);
+  if (run.program === 'times') T.logRound(data.programs.times, day, { n, ok: run.correct, ms: run.ms, lv: run.blocks[0].levelBefore, sk: run.skips, partial: true });
+  snapshotScore(run.program, day);
+  saveKid(kid.id, data, day);
+}
+// צילום יומי של ציון היכולת (לגרף ההתקדמות של ההורה). נשמר רק כשיש נתונים מספיקים.
+function snapshotScore(program, day) {
+  const prof = profileOf(program), r = A.abilityScore(program === 'times' ? prof : data.profile, program);
+  if (r.score !== null && prof.days[day]) prof.days[day].sc = r.score;
+}
+function sessionOf(day) {
+  return data.sessions[day] || (data.sessions[day] = { date: day, kidId: kid.id, answered: 0, correct: 0, rounds: 0, byTopic: {}, levelStart: Object.assign({}, data.profile.levels), levelEnd: {}, mistakes: [] });
+}
+function finishRound(partial) {
   const day = E.dayKey(), counts = {};
   run.plan.forEach(p => { counts[p.topic] = p.count; });
-  E.completeRound(profileOf(run.program), day, counts);
-  const s = data.sessions[day];
-  if (s) s.rounds = (s.rounds || 0) + 1;
+  run.blocks.forEach(bk => { bk.levelAfter = levelOf(bk.id); });
+  if (partial) { recordPartial(); }
+  else {
+    E.completeRound(profileOf(run.program), day, counts);
+    const s = data.sessions[day];
+    if (s) s.rounds = (s.rounds || 0) + 1;
+  }
+  const done = run.blocks.filter(b => b.n > 0);
   if (run.program === 'times') {
     const b = run.blocks[0];
     run.fb = I.timesFeedback({ n: b.n, ok: b.ok, levelBefore: b.levelBefore, levelAfter: levelOf('times'), results: b.results, prev: data.lastTimes, seed: Date.now() % 997 });
-    data.lastTimes = { n: b.n, ok: b.ok };
-    T.logRound(data.programs.times, day, { n: b.n, ok: b.ok, ms: run.ms, lv: b.levelBefore });
+    if (!partial) {
+      data.lastTimes = { n: b.n, ok: b.ok };
+      T.logRound(data.programs.times, day, { n: b.n, ok: b.ok, ms: run.ms, lv: b.levelBefore, sk: run.skips });
+    }
   } else {
-    run.fb = I.kidFeedback({ topics: run.blocks, prev: data.lastRound, seed: Date.now() % 997 });
-    data.lastRound = Object.fromEntries(run.blocks.map(b => [b.id, { n: b.n, ok: b.ok }]));
+    run.fb = I.kidFeedback({ topics: done, prev: data.lastRound, seed: Date.now() % 997 });
+    if (!partial) data.lastRound = Object.fromEntries(run.blocks.map(b => [b.id, { n: b.n, ok: b.ok }]));
   }
+  snapshotScore(run.program, day);
   saveKid(kid.id, data, day);
   viewDone();
 }
 
 function logAnswer(q, ok, givenText, before, ms) {
   const day = E.dayKey();
-  const s = data.sessions[day] || (data.sessions[day] = { date: day, kidId: kid.id, answered: 0, correct: 0, rounds: 0, byTopic: {}, levelStart: before, levelEnd: {}, mistakes: [] });
+  const s = sessionOf(day);
   s.answered++; if (ok) s.correct++;
   const bt = s.byTopic[q.topic] || (s.byTopic[q.topic] = { answered: 0, correct: 0 });
   bt.answered++; if (ok) bt.correct++;
@@ -351,7 +443,8 @@ function submit(given, btnIndex) {
   const ok = E.checkAnswer(q, given);
   const before = Object.assign({}, data.profile.levels);
   const res = run.program === 'times' ? T.record(data.programs.times, q, ok, E.dayKey()) : E.recordAnswer(data.profile, q.topic, ok, E.dayKey(), q.skill);
-  if (run.program === 'times') T.recordTime(data.programs.times, q, E.dayKey(), ms); else E.recordTime(data.profile, q.topic, E.dayKey(), ms);
+  if (run.program === 'times') T.recordTime(data.programs.times, q, E.dayKey(), ms, ok); else E.recordTime(data.profile, q.topic, E.dayKey(), ms, ok);
+  if (ok) { const dd = profileOf(run.program).days[E.dayKey()]; dd.st = (dd.st || 0) + 1; run.stars++; } // כוכב על כל תשובה נכונה
   run.ms += ms;
   if (ok) run.correct++;
   const blk = run.blocks[run.b]; blk.n++; if (ok) blk.ok++; blk.results.push(run.program === 'times' ? { skill: q.skill, ok, gen: q.gen, a: q.meta.a, b: q.meta.b } : { skill: q.skill, ok });
@@ -380,8 +473,8 @@ function submit(given, btnIndex) {
   const nextLbl = roundLast ? 'לסיכום' : blockLast ? 'לנושא הבא' : 'הבא';
   const correctText = q.kind === 'choice' ? rich(q.answer) : esc(E.fmt(q.answer));
   document.getElementById('sheet').innerHTML = ok
-    ? `<div class="sheet ok" role="status"><strong>${CHEERS[(run.correct + run.qi) % CHEERS.length]}</strong>${note ? `<p class="note">${esc(note)}</p>` : ''}<button class="btn" data-act="next" id="nextbtn">${nextLbl}</button></div>`
-    : `<div class="sheet bad" role="status"><strong>כמעט</strong><p>התשובה הנכונה: <b${q.kind === 'num' || isLtrChoice(q.answer) ? ' dir="ltr"' : ''}>${correctText}</b></p><p class="why">${rich(q.explain)}</p>${q.svgAfter ? `<div class="fig">${q.svgAfter}</div>` : ''}${note ? `<p class="note">${esc(note)}</p>` : ''}<button class="btn" data-act="next" id="nextbtn">${blockLast ? nextLbl : 'הבנתי, ממשיכים'}</button></div>`;
+    ? `<div class="sheet ok" role="status"><div class="shd">${mascot('cheer')}<strong>${CHEERS[(run.correct + run.qi) % CHEERS.length]}</strong><span class="star-pop" aria-hidden="true">⭐</span></div>${note ? `<p class="note">${esc(note)}</p>` : ''}<button class="btn" data-act="next" id="nextbtn">${nextLbl}</button></div>`
+    : `<div class="sheet bad" role="status"><div class="shd">${mascot('oops')}<strong>${OOPS[(run.qi + run.correct) % OOPS.length]}</strong></div><p>התשובה הנכונה: <b${q.kind === 'num' || isLtrChoice(q.answer) ? ' dir="ltr"' : ''}>${correctText}</b></p><p class="why">${rich(q.explain)}</p>${q.svgAfter ? `<div class="fig">${q.svgAfter}</div>` : ''}${note ? `<p class="note">${esc(note)}</p>` : ''}<button class="btn" data-act="next" id="nextbtn">${blockLast ? nextLbl : 'הבנתי, ממשיכים'}</button></div>`;
   const nb = document.getElementById('nextbtn'); if (nb) nb.focus({ preventScroll: true });
 }
 
@@ -419,7 +512,12 @@ app.addEventListener('click', e => {
   else if (act === 'reload') refreshFamily().then(() => { family = getFamily(); viewWho(); });
   else if (act === 'start') startRun(b.dataset.program);
   else if (act === 'begin') nextQ();
-  else if (act === 'home' || act === 'quit') viewHome();
+  else if (act === 'home') viewHome();
+  else if (act === 'quit') openStop();
+  else if (act === 'resume') { closeStop(); clockResume(); }
+  else if (act === 'finish') stopRun(true);
+  else if (act === 'exit') stopRun(false);
+  else if (act === 'skip') skipQ();
   else if (act === 'key') { if (!run.locked && run.typed.length < 9) setTyped(run.typed + b.dataset.k); }
   else if (act === 'del') { if (!run.locked) setTyped(run.typed.slice(0, -1)); }
   else if (act === 'ok') submit(run.typed);

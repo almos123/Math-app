@@ -4,7 +4,7 @@ import { firebaseConfigured, loadFirebase } from './fb.js';
 import { getFamily, loadKid } from './store.js';
 import { listFamilies, createFamily, addChild, removeChild, setTest, inviteParent, removeParent, showCode, MAX_KIDS } from './family.js';
 
-const E = window.MathEngine, I = window.Insights;
+const E = window.MathEngine, I = window.Insights, A = window.Ability;
 const app = document.getElementById('app');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const topic = id => (id === 'times' ? { short: 'לוח הכפל', icon: '✖️' } : E.TOPICS.find(t => t.id === id) || { short: id, icon: '', name: id });
@@ -43,19 +43,20 @@ async function fromRemote(code, roster) {
 }
 
 // ---------- רכיבים ----------
-function chart(days) { // דיוק יומי — סדרה אחת, קו דק, תווית רק לערך האחרון
+function chart(days, mode) { // דיוק יומי (ברירת מחדל) או ציון יכולת (mode='score') — סדרה אחת, קו דק, תווית רק לערך האחרון
   const W = 360, H = 150, L = 38, R = 14, T = 18, B = 26;
-  const pts = days.map(d => ({ day: d.day, v: pct(d.correct, d.answered), n: d.answered }));
+  const sc = mode === 'score', unit = sc ? '' : '%', what = sc ? 'ציון' : 'דיוק יומי';
+  const pts = days.map(d => ({ day: d.day, v: sc ? d.sc : pct(d.correct, d.answered), n: d.answered }));
   if (!pts.length) return '';
   const x = i => (pts.length === 1 ? (L + W - R) / 2 : L + (i * (W - L - R)) / (pts.length - 1));
   const y = v => T + (1 - v / 100) * (H - T - B);
-  const grid = [0, 50, 100].map(v => `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}%</text>`).join('');
+  const grid = [0, 50, 100].map(v => `<line class="axis" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}${unit}</text>`).join('');
   const line = pts.length > 1 ? `<polyline class="ln" points="${pts.map((p, i) => `${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ')}"/>` : '';
-  const dots = pts.map((p, i) => `<circle class="pt" cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="5"><title>${dm(p.day)}: ${p.v}% (${p.n} תרגילים)</title></circle>`).join('');
+  const dots = pts.map((p, i) => `<circle class="pt" cx="${x(i).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="5"><title>${dm(p.day)}: ${p.v}${unit}${sc ? '' : ` (${p.n} תרגילים)`}</title></circle>`).join('');
   const last = pts[pts.length - 1];
-  const lastLbl = `<text class="val" x="${x(pts.length - 1).toFixed(1)}" y="${(y(last.v) - 10).toFixed(1)}" text-anchor="middle">${last.v}%</text>`;
+  const lastLbl = `<text class="val" x="${x(pts.length - 1).toFixed(1)}" y="${(y(last.v) - 10).toFixed(1)}" text-anchor="middle">${last.v}${unit}</text>`;
   const xl = `<text x="${x(0)}" y="${H - 6}" text-anchor="middle">${dm(pts[0].day)}</text>` + (pts.length > 1 ? `<text x="${x(pts.length - 1)}" y="${H - 6}" text-anchor="middle">${dm(last.day)}</text>` : '');
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="דיוק יומי: ${pts.map(p => dm(p.day) + ' ' + p.v + '%').join(', ')}" direction="ltr">${grid}${line}${dots}${lastLbl}${xl}</svg>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${what}: ${pts.map(p => dm(p.day) + ' ' + p.v + unit).join(', ')}" direction="ltr">${grid}${line}${dots}${lastLbl}${xl}</svg>`;
 }
 
 const STATUS = {
@@ -85,12 +86,42 @@ function topicBlock(t) {
 function timeBlock(tm, rlog) {
   if (!tm.timed) return '<div><h4>זמני תרגול</h4><p class="p-sub">הזמן מתחיל להימדד מהתרגול הבא.</p></div>';
   const rows = (rlog || []).filter(r => r.ms > 0).slice(-8).reverse();
-  const rtable = rows.length ? `<details><summary>סבבים אחרונים עם זמן</summary><table class="t"><thead><tr><th>יום</th><th class="n">תוצאה</th><th class="n">זמן</th><th class="n">ממוצע לשאלה</th></tr></thead><tbody>${rows.map(r => `<tr><td>${dm(r.d)}</td><td class="n">${r.ok}/${r.n}</td><td class="n">${I.fmtDur(r.ms)}</td><td class="n">${I.fmtAvg(r.ms / r.n)}</td></tr>`).join('')}</tbody></table></details>` : '';
+  const rtable = rows.length ? `<details><summary>סבבים אחרונים עם זמן</summary><table class="t"><thead><tr><th>יום</th><th class="n">תוצאה</th><th class="n">זמן</th><th class="n">ממוצע לשאלה</th><th>הערה</th></tr></thead><tbody>${rows.map(r => `<tr><td>${dm(r.d)}</td><td class="n">${r.ok}/${r.n}</td><td class="n">${I.fmtDur(r.ms)}</td><td class="n">${I.fmtAvg(r.ms / r.n)}</td><td>${[r.p ? 'הופסק באמצע' : '', r.sk ? `דילוגים: ${r.sk}` : ''].filter(Boolean).join(', ')}</td></tr>`).join('')}</tbody></table></details>` : '';
   const slow = tm.slowFacts.length ? `<p><b>תרגילים שלוקחים יותר זמן:</b> ${tm.slowFacts.map(f => `<span dir="ltr">${esc(f.text)}</span> (${I.fmtAvg(f.avgMs)})`).join(' · ')}</p>` : '';
   const bt = tm.byTopic.length ? `<p><b>ממוצע לשאלה לפי נושא:</b> ${tm.byTopic.map(t => `${esc(t.short)} ${I.fmtAvg(t.avgMs)}`).join(' · ')}</p>` : '';
   return `<div class="timeblk"><h4>⏱ זמני תרגול (מוצג להורים בלבד)</h4>${tm.paragraphs.map(x => `<p>${esc(x)}</p>`).join('')}${slow}${bt}${rtable}</div>`;
 }
 const dayTime = d => (d && d.tn ? [I.fmtDur(d.ms), I.fmtAvg(d.ms / d.tn)] : ['לא זמין', 'לא זמין']);
+
+
+// ---------- מצב פתיחה/סגירה (נשמר במכשיר ההורה) ----------
+const OPEN_KEY = 'mathapp:parent:closed';
+const readClosed = () => { try { return JSON.parse(localStorage.getItem(OPEN_KEY) || '{}'); } catch (e) { return {}; } };
+const writeClosed = o => { try { localStorage.setItem(OPEN_KEY, JSON.stringify(o)); } catch (e) { /* ignore */ } };
+const isOpen = key => !readClosed()[key];
+
+// ---------- ציון יכולת ----------
+const bandCls = s => (s === null || s === undefined ? 'na' : s >= 80 ? 'b4' : s >= 60 ? 'b3' : s >= 40 ? 'b2' : 'b1');
+function scoreChip(score, label) {
+  return `<span class="sc ${bandCls(score)}" title="${esc(label || 'ציון יכולת')}">${score === null || score === undefined ? 'לא זמין' : `<b>${score}</b>/100`}</span>`;
+}
+function scoreBlock(ab, days) {
+  const pts = Object.keys(days || {}).filter(d => days[d].sc).sort().slice(-30).map(d => ({ day: d, sc: days[d].sc, answered: days[d].answered }));
+  const top = ab.topics.filter(t => t.included && ab.topics.length > 1).map(t => `<li><span>${esc(t.id === 'times' ? 'לוח הכפל' : I.SHORT[t.id])}</span>${scoreChip(t.score)}</li>`).join('');
+  return `<div class="scoreblk"><div class="sc-h"><h4>ציון יכולת</h4>${scoreChip(ab.score)}${ab.score !== null ? `<span class="p-sub">${esc(A.band(ab.score))}</span>` : ''}</div>
+    ${ab.score !== null ? `<div class="scbar" aria-hidden="true"><i class="${bandCls(ab.score)}" style="width:${ab.score}%"></i></div>` : `<p class="p-sub">לא זמין: ${esc(ab.need)}</p>`}
+    ${top ? `<ul class="topsc">${top}</ul>` : ''}
+    <p class="p-sub note">הציון אינו אחוז תשובות נכונות. הוא נשען על הרמה שהילד הגיע אליה ועל ההבנה ברמה הזו (דיוק בתשובות האחרונות), ובתשובות נכונות גם על המהירות (עד 12% מהציון${ab.score !== null && !ab.speedUsed ? '; עדיין אין מספיק נתוני זמן, ולכן המהירות נלקחה כניטרלית' : ''}). הוא אינו ציון בית-ספרי.</p>
+    ${pts.length >= 2 ? `<div><h4>גרף התקדמות (ציון לפי יום)</h4>${chart(pts.map(x => ({ day: x.day, sc: x.sc, answered: x.answered })), 'score')}</div>` : `<p class="p-sub">גרף ההתקדמות יופיע אחרי שיהיו ציונים משני ימי תרגול לפחות.</p>`}</div>`;
+}
+function engagementLine(en, f) {
+  if (!en || (!en.skips && !en.partial)) return '';
+  const bits = [];
+  if (en.skips) bits.push(`דילוגים: ${en.skips} (${pct(en.skips, en.answered + en.skips)}% מהשאלות שהוצגו)`);
+  if (en.partial) bits.push(`${en.partial} ${en.partial === 1 ? 'תרגול הופסק' : 'תרגולים הופסקו'} באמצע (${en.partialQ} תשובות עד ההפסקה)`);
+  return `<p class="engl"><b>התנהלות בתרגול:</b> ${bits.join(' · ')}. דילוג אינו נחשב כטעות, והשאלה חוזרת בסוף אותו חלק; סבב שהופסק אינו נספר כסבב מלא.</p>`;
+}
+const section = (key, title, score, inner) => `<details class="prog-sec" data-open-key="${esc(key)}"${isOpen(key) ? ' open' : ''}><summary><span class="st-t">${title}</span>${scoreChip(score)}</summary>${inner}</details>`;
 
 const TIMES_STATUS = STATUS;
 function gridHtml(facts) {
@@ -110,10 +141,11 @@ function timesSection(kid, xp, today) {
   const days = xp.days || {}, dl = Object.keys(days).filter(d => days[d].answered > 0).sort();
   const series = dl.slice(-14).map(d => ({ day: d, answered: days[d].answered, correct: days[d].correct }));
   const t = days[today] || { answered: 0, rounds: 0 };
-  const table = `<table class="t"><thead><tr><th>יום</th><th class="n">תרגילים</th><th class="n">נכונים</th><th class="n">דיוק</th><th class="n">זמן</th><th class="n">ממוצע</th></tr></thead><tbody>${series.slice().reverse().map(d => { const tt = dayTime(days[d.day]); return `<tr><td>${dm(d.day)}</td><td class="n">${d.answered}</td><td class="n">${d.correct}</td><td class="n">${pct(d.correct, d.answered)}%</td><td class="n">${tt[0]}</td><td class="n">${tt[1]}</td></tr>`; }).join('')}</tbody></table>`;
+  const table = `<table class="t"><thead><tr><th>יום</th><th class="n">תרגילים</th><th class="n">נכונים</th><th class="n">דיוק</th><th class="n">זמן</th><th class="n">ממוצע</th><th class="n">דילוגים</th><th class="n">הופסק</th></tr></thead><tbody>${series.slice().reverse().map(d => { const tt = dayTime(days[d.day]); return `<tr><td>${dm(d.day)}</td><td class="n">${d.answered}</td><td class="n">${d.correct}</td><td class="n">${pct(d.correct, d.answered)}%</td><td class="n">${tt[0]}</td><td class="n">${tt[1]}</td><td class="n">${days[d.day].sk || 0}</td><td class="n">${days[d.day].part || 0}</td></tr>`; }).join('')}</tbody></table>`;
   const tm = I.analyzeTiming({ days, stats: xp.stats, rlog: xp.rlog, facts: xp.facts });
   const tb = { id: 'times', short: 'לוח הכפל', level: a.level, startLevel: a.startLevel, answered: a.total, recentAcc: a.recentAcc, baseAcc: a.baseAcc };
-  return `<section class="prog-sec" aria-label="לוח הכפל"><h3>✖️ לוח הכפל <span class="chip ${cls}">${lbl}</span></h3>
+  const ab = A.abilityScore(xp, 'times'), en = A.engagement(xp.days, xp.stats);
+  const inner = `<span class="chip ${cls}" style="align-self:start">${lbl}</span>${scoreBlock(ab, xp.days)}${engagementLine(en)}
     <section class="summary"><h3>סיכום</h3>${a.paragraphs.map(p => `<p>${esc(p)}</p>`).join('')}${a.weekly ? `<p>${esc(a.weekly.text)}</p>` : ''}</section>
     <div class="bar" aria-hidden="true">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= a.level ? 'on' : ''}"></i>`).join('')}</div>
     <dl class="cmp"><div><dt>התחלה</dt><dd>${fmtStart(tb)}</dd></div><div><dt>עכשיו</dt><dd>${fmtNow(tb)}</dd></div><div><dt>היום</dt><dd>${t.answered} שאלות</dd></div></dl>
@@ -121,8 +153,64 @@ function timesSection(kid, xp, today) {
     ${a.total >= 5 ? `<div><h4>מפת התרגילים</h4>${gridHtml(a.facts)}</div>` : ''}
     ${a.weakFacts.length ? `<div><h4>תרגילים לחיזוק</h4><ul class="weakl">${a.weakFacts.map(w => `<li><b>${esc(w.text)}</b> (${w.right} נכון מתוך ${w.tries})<br>${esc(w.tip)}</li>`).join('')}</ul></div>` : ''}
     <div><h4>המלצות להמשך</h4><ul class="recs">${a.recommendations.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>
-    ${series.length ? `<div><h4>דיוק יומי</h4>${chart(series)}</div><details><summary>טבלת ימים</summary>${table}</details>` : ''}
-  </section>`;
+    ${series.length ? `<div><h4>דיוק יומי</h4>${chart(series)}</div><details><summary>טבלת ימים</summary>${table}</details>` : ''}`;
+  return section(kid.id + ':times', '✖️ לוח הכפל', ab.score, inner);
+}
+
+
+// ---------- סיכום להורים (חוזקות, קשיים, הסבר והמלצות) ----------
+let lastRows = [];
+function reportHtml(rep) {
+  const sc = A.band(rep.overall.score);
+  const list = (arr, fn) => (arr.length ? `<ul>${arr.map(fn).join('')}</ul>` : '');
+  const prog = p => {
+    if (!p.started) return `<section class="rp"><h3>${p.icon} ${esc(p.title)}</h3><p>עוד לא תורגל.</p></section>`;
+    return `<section class="rp"><h3>${p.icon} ${esc(p.title)} ${scoreChip(p.ability.score)}</h3>
+      ${p.ability.score === null ? `<p class="p-sub">ציון: לא זמין. ${esc(p.ability.need)}</p>` : `<p>${esc(sc && A.band(p.ability.score))} (${p.ability.score} מתוך 100)</p>`}
+      ${(p.summaryParas || []).slice(0, 2).map(x => `<p>${esc(x)}</p>`).join('')}
+      <h4>מה חזק</h4>${p.strengths.length ? list(p.strengths, s => `<li><b>${esc(s.title)}</b>${s.evidence ? ` <span class="p-sub">(${esc(s.evidence)})</span>` : ''}</li>`) : '<p class="p-sub">עדיין לא זוהה תחום חזק במובהק. נדרש עוד תרגול.</p>'}
+      <h4>מה דורש חיזוק</h4>${p.focus.length ? p.focus.map(f => `<div class="focus"><b>${esc(f.title)}</b>${f.evidence ? `<div class="p-sub">${esc(f.evidence)}</div>` : ''}
+        ${f.why.length ? `<div class="why"><b>למה זה קשה:</b>${list(f.why, w => `<li>${esc(w)}</li>`)}</div>` : ''}
+        ${f.how.length ? `<div class="how"><b>איך משפרים:</b>${list(f.how, h => `<li>${esc(h)}</li>`)}</div>` : ''}</div>`).join('') : '<p class="p-sub">לא זוהו תחומים חלשים במובהק.</p>'}
+      ${p.timing ? `<p class="p-sub">זמן: ממוצע ${I.fmtAvg(p.timing.avgMs)} לשאלה (${p.timing.timed} שאלות נמדדו).</p>` : ''}
+      ${engagementLine(p.engagement)}</section>`;
+  };
+  return `<div class="report"><h2>סיכום יכולות: ${esc(rep.name)}</h2><p class="p-sub">${esc(rep.date)}</p>
+    <div class="rp-ov">ציון כללי ${scoreChip(rep.overall.score, 'ציון כללי')} ${rep.overall.score !== null ? `<span>${esc(rep.overall.band)}</span>` : '<span class="p-sub">לא זמין (אין מספיק נתונים)</span>'}</div>
+    <p class="p-sub note">הציון מודד את הרמה ואת ההבנה במערכת התרגול, ובתשובות נכונות גם את המהירות. הוא אינו אחוז תשובות נכונות ואינו ציון בית-ספרי.</p>
+    ${rep.programs.map(prog).join('')}
+    ${rep.notes.length ? `<section class="rp"><h3>התנהלות בתרגול</h3>${list(rep.notes, n => `<li>${esc(n)}</li>`)}</section>` : ''}
+    ${rep.nextSteps.length ? `<section class="rp"><h3>מה כדאי לעשות בבית</h3>${list(rep.nextSteps, n => `<li>${esc(n)}</li>`)}</section>` : ''}</div>`;
+}
+const REPORT_CSS = 'body{font-family:system-ui,-apple-system,"Segoe UI",Arial,sans-serif;max-width:720px;margin:0 auto;padding:18px;line-height:1.55;color:#1B2A4A}h2{margin:.2em 0}h3{border-bottom:2px solid #1B2A4A;padding-bottom:4px;margin-top:1.4em}h4{margin:1em 0 .2em}.p-sub{color:#55607A}.sc{display:inline-block;padding:1px 10px;border-radius:999px;border:2px solid #1B2A4A;font-size:15px}.focus{border:2px solid #C9D2E8;border-radius:12px;padding:8px 12px;margin:8px 0}li{margin:.2em 0}.how{background:#E9F6EF;border-radius:8px;padding:4px 10px;margin-top:6px}.why{background:#FFF6DF;border-radius:8px;padding:4px 10px;margin-top:6px}';
+function reportFile(rep) {
+  return `<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>סיכום יכולות: ${esc(rep.name)}</title><style>${REPORT_CSS}</style></head><body>${reportHtml(rep)}</body></html>`;
+}
+function openReport(id) {
+  const row = lastRows.find(r => r.kid.id === id); if (!row || !row.profile) return;
+  const rep = A.buildReport(row.kid, row.profile, { today: E.dayKey() });
+  window.__lastReport = rep;
+  const m = document.createElement('div');
+  m.className = 'modal rmodal'; m.id = 'rmodal'; m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'סיכום להורים');
+  m.innerHTML = `<div class="mbox rbox"><div class="rbar"><button class="btn" data-act="rdownload">הורדת קובץ</button><button class="btn" data-act="rcopy">העתקת טקסט</button><button class="btn" data-act="rshare">שיתוף</button><button class="btn" data-act="rprint">הדפסה / PDF</button><button class="btn" data-act="rclose">סגירה</button></div><p class="p-sub" id="rmsg" role="status"></p>${reportHtml(rep)}</div>`;
+  app.appendChild(m);
+}
+async function reportAction(act) {
+  const rep = window.__lastReport; if (!rep) return;
+  const msg = document.getElementById('rmsg'), say = t => { if (msg) msg.textContent = t; };
+  if (act === 'rclose') { const m = document.getElementById('rmodal'); if (m) m.remove(); return; }
+  if (act === 'rprint') { document.body.classList.add('printing-report'); window.print(); setTimeout(() => document.body.classList.remove('printing-report'), 500); return; }
+  if (act === 'rcopy') { try { await navigator.clipboard.writeText(A.reportText(rep)); say('הסיכום הועתק. אפשר להדביק בהודעה או במסמך.'); } catch (e) { say('לא הצלחתי להעתיק. אפשר להוריד כקובץ.'); } return; }
+  if (act === 'rshare') {
+    if (navigator.share) { try { await navigator.share({ title: `סיכום יכולות: ${rep.name}`, text: A.reportText(rep) }); } catch (e) { /* בוטל */ } }
+    else say('השיתוף לא נתמך בדפדפן הזה. אפשר להעתיק או להוריד.');
+    return;
+  }
+  if (act === 'rdownload') {
+    const blob = new Blob([reportFile(rep)], { type: 'text/html;charset=utf-8' }), url = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = url; a.download = `סיכום-${rep.name}-${rep.date}.html`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 4000); say('הקובץ הורד. אפשר לפתוח אותו, להדפיס או לשמור כ-PDF.');
+  }
 }
 
 function kidCard(r) {
@@ -137,18 +225,21 @@ function kidCard(r) {
   const dayList = used(days).sort(), xList = used(xdays);
   const lastDay = dayList.concat(xList).sort().pop();
   const since = lastDay ? daysSince(lastDay) : null;
-  const testHtml = dayList.length ? testSection(kid, profile, sessions, dayList, today) : '<p class="empty">עוד לא התחיל' + (f ? 'ה' : '') + ' את ההכנה למבדק.</p>';
+  const testHtml = dayList.length ? testSection(kid, profile, sessions, dayList, today) : '';
   const mistakes = sessions.flatMap(s => (s.mistakes || []).map(m => Object.assign({ day: s.date }, m))).sort((x, y) => (y.t || y.day).localeCompare(x.t || x.day)).slice(0, 15);
   const mist = mistakes.length
     ? `<ul class="mist">${mistakes.map(m => `<li><div class="q"><b>${topic(m.topic).icon} ${esc(topic(m.topic).short)}</b> · ${dm(m.day)}<br>${esc(m.q)}</div><div class="a">${f ? 'ענתה' : 'ענה'}: <b dir="ltr">${esc(m.given)}</b> · נכון: <b dir="ltr">${esc(m.correct)}</b></div></li>`).join('')}</ul>`
     : '<p class="empty">אין טעויות שמורות.</p>';
-  return `<article class="kidcard">
-    ${head}<span class="p-sub">${lastDay ? `תרגול אחרון: ${since === 0 ? 'היום' : since === 1 ? 'אתמול' : dm(lastDay)}` : ''}${profile.streak ? ` · ${profile.streak} ${profile.streak === 1 ? 'יום' : 'ימים'} ברצף` : ''}</span></header>
+  const ov = A.overallScore(profile);
+  const key = kid.id + ':card';
+  return `<details class="kidcard" data-open-key="${esc(key)}"${isOpen(key) ? ' open' : ''}>
+    <summary class="kc-sum"><h2 class="kc-name">${esc(kid.emoji || '')} ${esc(kid.name)}</h2>${scoreChip(ov.score, 'ציון כללי')}<span class="p-sub kc-sub">${ov.score !== null ? `ציון כללי · ${esc(ov.band)}` : 'ציון כללי: לא זמין'}${lastDay ? ` · תרגול אחרון: ${since === 0 ? 'היום' : since === 1 ? 'אתמול' : dm(lastDay)}` : ''}${profile.streak ? ` · ${profile.streak} ${profile.streak === 1 ? 'יום' : 'ימים'} ברצף` : ''}</span></summary>
     ${since !== null && since >= 2 ? `<p class="warn">לא ${f ? 'תרגלה' : 'תרגל'} ${since} ימים (מאז ${dm(lastDay)}).</p>` : ''}
-    <section class="prog-sec" aria-label="הכנה למבדק"><h3>📝 הכנה למבדק</h3>${testHtml}</section>
-    ${xList.length ? timesSection(kid, xp, today) : `<section class="prog-sec" aria-label="לוח הכפל"><h3>✖️ לוח הכפל</h3><p class="empty">עוד לא ${f ? 'תרגלה' : 'תרגל'} את לוח הכפל.</p></section>`}
-    <details><summary>טעויות אחרונות (${mistakes.length})</summary>${mist}</details>
-  </article>`;
+    <div class="kc-act"><button class="btn" data-act="report" data-id="${esc(kid.id)}">📄 סיכום להורים: חוזקות, קשיים והמלצות</button></div>
+    ${dayList.length ? testHtml : `<details class="prog-sec" open><summary><span class="st-t">📝 הכנה למבדק</span>${scoreChip(null)}</summary><p class="empty">עוד לא התחיל${f ? 'ה' : ''} את ההכנה למבדק.</p></details>`}
+    ${xList.length ? timesSection(kid, xp, today) : `<details class="prog-sec" open><summary><span class="st-t">✖️ לוח הכפל</span>${scoreChip(null)}</summary><p class="empty">עוד לא ${f ? 'תרגלה' : 'תרגל'} את לוח הכפל.</p></details>`}
+    <details class="prog-sec"><summary><span class="st-t">טעויות אחרונות (${mistakes.length})</span></summary>${mist}</details>
+  </details>`;
 }
 
 function testSection(kid, profile, sessions, dayList, today) {
@@ -158,10 +249,11 @@ function testSection(kid, profile, sessions, dayList, today) {
   const wkPct = pct(week.c, week.n);
   const a = I.analyzeKid(profile, { name: kid.name, gender: kid.gender, today });
   const series = dayList.slice(-14).map(d => ({ day: d, answered: days[d].answered, correct: days[d].correct }));
-  const table = `<table class="t"><thead><tr><th>יום</th><th class="n">תרגילים</th><th class="n">נכונים</th><th class="n">דיוק</th><th class="n">סבבים</th><th class="n">זמן</th><th class="n">ממוצע</th></tr></thead><tbody>${series.slice().reverse().map(d => { const tt = dayTime(days[d.day]); return `<tr><td>${dm(d.day)}</td><td class="n">${d.answered}</td><td class="n">${d.correct}</td><td class="n">${pct(d.correct, d.answered)}%</td><td class="n">${days[d.day].rounds || 0}</td><td class="n">${tt[0]}</td><td class="n">${tt[1]}</td></tr>`; }).join('')}</tbody></table>`;
+  const table = `<table class="t"><thead><tr><th>יום</th><th class="n">תרגילים</th><th class="n">נכונים</th><th class="n">דיוק</th><th class="n">סבבים</th><th class="n">זמן</th><th class="n">ממוצע</th><th class="n">דילוגים</th><th class="n">הופסק</th></tr></thead><tbody>${series.slice().reverse().map(d => { const tt = dayTime(days[d.day]); return `<tr><td>${dm(d.day)}</td><td class="n">${d.answered}</td><td class="n">${d.correct}</td><td class="n">${pct(d.correct, d.answered)}%</td><td class="n">${days[d.day].rounds || 0}</td><td class="n">${tt[0]}</td><td class="n">${tt[1]}</td><td class="n">${days[d.day].sk || 0}</td><td class="n">${days[d.day].part || 0}</td></tr>`; }).join('')}</tbody></table>`;
   const tmT = I.analyzeTiming({ days, stats: profile.stats });
   const tmHtml = tmT.timed ? `<div class="timeblk"><h4>⏱ זמני תרגול (מוצג להורים בלבד)</h4><p>בכל התרגול שנמדד (${tmT.timed} שאלות): ממוצע ${I.fmtAvg(tmT.avgMs)} לשאלה, סך הכול ${I.fmtDur(tmT.totalMs)}.</p>${tmT.byTopic.length ? `<p><b>ממוצע לשאלה לפי נושא:</b> ${tmT.byTopic.map(t => `${esc(t.short)} ${I.fmtAvg(t.avgMs)}`).join(' · ')}</p>` : ''}</div>` : '';
-  return `<section class="summary" aria-label="סיכום מילולי"><h3>סיכום</h3>${a.paragraphs.map(p => `<p>${esc(p)}</p>`).join('')}${a.weekly ? `<p>${esc(a.weekly.text)}</p>` : ''}</section>
+  const ab = A.abilityScore(profile, 'test'), en = A.engagement(days, profile.stats);
+  const inner = `${scoreBlock(ab, days)}${engagementLine(en)}<section class="summary" aria-label="סיכום מילולי"><h3>סיכום</h3>${a.paragraphs.map(p => `<p>${esc(p)}</p>`).join('')}${a.weekly ? `<p>${esc(a.weekly.text)}</p>` : ''}</section>
     <div class="stats">
       <div class="stat"><b>${t.answered} שאלות${t.rounds ? ` · ${t.rounds} ${t.rounds === 1 ? 'סבב' : 'סבבים'}` : ''}</b><span>היום</span></div>
       <div class="stat"><b>${wkPct === null ? 'לא זמין' : wkPct + '%'}</b><span>דיוק ב-7 ימים (${week.n} תרגילים)</span></div>
@@ -171,6 +263,7 @@ function testSection(kid, profile, sessions, dayList, today) {
     ${series.length ? `<div><h4>דיוק יומי</h4>${chart(series)}</div>` : ''}
     ${tmHtml}
     <details><summary>טבלת ימים</summary>${table}</details>`;
+  return section(kid.id + ':test', '📝 הכנה למבדק', ab.score, inner);
 }
 
 const isOwner = () => !!user && fam && fam.ownerUid === user.uid;
@@ -204,6 +297,7 @@ function familyPanel() {
 }
 
 function renderDash(rows, banner, withFamily) {
+  lastRows = rows;
   const f = getFamily(), test = withFamily ? fam.test : (f && f.test);
   let cd = '';
   if (test && test.date) {
@@ -211,7 +305,7 @@ function renderDash(rows, banner, withFamily) {
     cd = ` · ${d > 1 ? `עוד ${d} ימים` : d === 1 ? 'מחר' : d === 0 ? 'היום' : ''}`.replace(/ · $/, '');
   }
   app.innerHTML = `<main class="p-wrap">
-    <div class="p-head"><div><h1>התקדמות הילדים</h1><p class="p-sub">${test && test.date ? `${esc(test.name || 'מבדק')} · ${dm(test.date)}${cd}` : ''}</p></div><div class="p-actions"><button class="btn" data-act="refresh">רענון</button>${user ? '<button class="link" data-act="signout">יציאה</button>' : ''}</div></div>
+    <div class="p-head"><div><h1>התקדמות הילדים</h1><p class="p-sub">${test && test.date ? `${esc(test.name || 'מבדק')} · ${dm(test.date)}${cd}` : ''}</p></div><div class="p-actions"><button class="btn" data-act="openall">פתיחת הכול</button><button class="btn" data-act="closeall">סגירת הכול</button><button class="btn" data-act="refresh">רענון</button>${user ? '<button class="link" data-act="signout">יציאה</button>' : ''}</div></div>
     ${banner ? `<p class="banner">${banner}</p>` : ''}
     ${withFamily ? familyPanel() : ''}
     ${rows.length ? rows.map(kidCard).join('') : '<p class="empty">הוסיפו ילד כדי להתחיל.</p>'}
@@ -267,6 +361,13 @@ app.addEventListener('click', async e => {
   if (!b) return;
   const act = b.dataset.act;
   if (act === 'refresh') { if (user) fam = null; return load(); }
+  if (act === 'report') return openReport(b.dataset.id);
+  if (/^r(download|copy|share|print|close)$/.test(act)) return reportAction(act);
+  if (act === 'openall' || act === 'closeall') {
+    const open = act === 'openall', c = readClosed();
+    document.querySelectorAll('details[data-open-key]').forEach(d => { d.open = open; const k = d.dataset.openKey; if (open) delete c[k]; else c[k] = 1; });
+    writeClosed(c); return;
+  }
   if (act === 'copy') {
     const el = document.getElementById('copied');
     try { await navigator.clipboard.writeText(fam.code); el.textContent = 'הקוד הועתק'; } catch (err) { el.textContent = 'לא הצלחתי להעתיק, אפשר להעתיק ידנית.'; }
@@ -305,6 +406,13 @@ app.addEventListener('submit', async e => {
     try { await setTest(fam.code, date ? { name, date } : null); await reloadFamily(); } catch (err) { fail(err, 'השמירה נכשלה'); }
   }
 });
+
+// זוכרים אילו כרטיסים סגורים (במכשיר ההורה בלבד)
+app.addEventListener('toggle', e => {
+  const d = e.target, k = d && d.dataset && d.dataset.openKey;
+  if (!k) return;
+  const c = readClosed(); if (d.open) delete c[k]; else c[k] = 1; writeClosed(c);
+}, true);
 
 window.__parent = { fromLocal, kidCard };
 start();

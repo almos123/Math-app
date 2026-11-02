@@ -849,14 +849,31 @@
   }
   // זמן תשובה (מילי-שניות): נשמר רק לצפייה של ההורה. מוגבל כדי שהפסקה באמצע שאלה לא תעוות את הממוצע.
   const TIME_CAP_MS = 120000;
-  function recordTime(profile, topicId, day, ms) {
+  function recordTime(profile, topicId, day, ms, correct) {
     const m = Math.max(0, Math.min(TIME_CAP_MS, Math.round(Number(ms) || 0)));
     const dk = day || dayKey();
     const d = profile.days[dk] || (profile.days[dk] = { answered: 0, correct: 0 });
     d.ms = (d.ms || 0) + m; d.tn = (d.tn || 0) + 1;
     const st = profile.stats[topicId];
-    if (st) { st.ms = (st.ms || 0) + m; st.tn = (st.tn || 0) + 1; }
+    if (st) {
+      st.ms = (st.ms || 0) + m; st.tn = (st.tn || 0) + 1;
+      if (correct) { st.cms = (st.cms || 0) + m; st.ctn = (st.ctn || 0) + 1; } // זמן בתשובות נכונות בלבד: משפיע על ציון היכולת
+    }
     return m;
+  }
+  // דילוג על שאלה (השאלה חוזרת בסוף אותו חלק). אינו משפיע על הרמה או על הדיוק, אך נספר להורה.
+  function recordSkip(profile, topicId, day, skill) {
+    const dk = day || dayKey();
+    const d = profile.days[dk] || (profile.days[dk] = { answered: 0, correct: 0 });
+    d.sk = (d.sk || 0) + 1;
+    const st = profile.stats[topicId]; if (st) st.sk = (st.sk || 0) + 1;
+    if (skill) { const k = profile.skills[skill] || (profile.skills[skill] = { n: 0, c: 0, r: '' }); k.sk = (k.sk || 0) + 1; }
+  }
+  // סיום באמצע: תרגול שהופסק לפני שנגמר (עם תשובה אחת לפחות)
+  function recordPartial(profile, day, answered) {
+    const dk = day || dayKey();
+    const d = profile.days[dk] || (profile.days[dk] = { answered: 0, correct: 0 });
+    d.part = (d.part || 0) + 1; d.pq = (d.pq || 0) + (answered || 0);
   }
   function accuracy(profile, topicId) {
     const s = profile.stats[topicId];
@@ -902,7 +919,7 @@
   return {
     TOPICS, LEVEL_NAMES, MAX_LEVEL, START_LEVEL, ROUND_MIN, ROUND_MAX,
     mulberry32, fmt, generateQuestion, qKey, checkAnswer, parseNumber,
-    newProfile, ensureProfile, recordAnswer, recordTime, TIME_CAP_MS, completeRound, accuracy, recentAccuracy,
+    newProfile, ensureProfile, recordAnswer, recordTime, recordSkip, recordPartial, TIME_CAP_MS, completeRound, accuracy, recentAccuracy,
     isMastered, isWeak, questionsPerTopic, planRound, streak, dayKey,
     _internals: { SHAPES, POLY, shapeSvg, polySvg },
   };
