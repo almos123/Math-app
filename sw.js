@@ -1,8 +1,8 @@
 // sw.js — מטמון בסיסי כדי שהאפליקציה תיפתח גם בלי חיבור.
 // מעלים את VERSION בכל פעם שמעדכנים קבצים, כדי שהמכשירים יטענו את הגרסה החדשה.
-const VERSION = 'v16';
+const VERSION = 'v17';
 const CACHE = 'math-app-' + VERSION;
-const SHELL = ['./', 'index.html', 'app.js', 'engine.js', 'times.js', 'insights.js', 'ability.js', 'english.js', 'ink.js', 'speech.js', 'english-ui.js', 'family.js', 'store.js', 'fb.js', 'config.js', 'style.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
+const SHELL = ['./', 'index.html', 'app.js', 'engine.js', 'times.js', 'insights.js', 'ability.js', 'english.js', 'g4.js', 'ink.js', 'speech.js', 'english-ui.js', 'family.js', 'store.js', 'fb.js', 'config.js', 'style.css', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

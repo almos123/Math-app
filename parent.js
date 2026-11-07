@@ -7,7 +7,8 @@ import { listFamilies, createFamily, addChild, removeChild, setTest, inviteParen
 const E = window.MathEngine, I = window.Insights, A = window.Ability;
 const app = document.getElementById('app');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const topic = id => (id === 'times' ? { short: 'לוח הכפל', icon: '✖️' } : E.TOPICS.find(t => t.id === id) || { short: id, icon: '', name: id });
+const G4 = window.Grade4;
+const topic = id => (id === 'times' ? { short: 'לוח הכפל', icon: '✖️' } : E.TOPICS.find(t => t.id === id) || G4.TOPICS.find(t => t.id === id) || { short: id, icon: '', name: id });
 const dm = day => { const [, m, d] = day.split('-'); return `${Number(d)}.${Number(m)}`; };
 const pct = (c, n) => (n ? Math.round(100 * c / n) : null);
 const daysBetween = (a, b) => Math.round((new Date(b + 'T00:00:00') - new Date(a + 'T00:00:00')) / 864e5);
@@ -21,7 +22,7 @@ function fromLocal() {
   return f.roster.map(k => {
     const d = loadKid(k.id), p = d.profile;
     const used = days => Object.keys(days || {}).some(x => days[x].answered > 0);
-    const started = used(p.days) || used(d.programs.times.days) || used(d.programs.english.days);
+    const started = used(p.days) || used(d.programs.times.days) || used(d.programs.english.days) || used(d.programs.g4.days);
     return { kid: k, profile: started ? Object.assign({}, p, { streak: window.TimesEngine.streakAny(p, d.programs.times, undefined, d.programs.english), programs: d.programs }) : null,
       sessions: Object.values(d.sessions).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14) };
   });
@@ -98,7 +99,7 @@ const dayTime = d => (d && d.tn ? [I.fmtDur(d.ms), I.fmtAvg(d.ms / d.tn)] : ['ל
 const OPEN_KEY = 'mathapp:parent:closed';
 const readClosed = () => { try { return JSON.parse(localStorage.getItem(OPEN_KEY) || '{}'); } catch (e) { return {}; } };
 const writeClosed = o => { try { localStorage.setItem(OPEN_KEY, JSON.stringify(o)); } catch (e) { /* ignore */ } };
-const isOpen = key => !readClosed()[key];
+const isOpen = (key, def = true) => { const v = readClosed()[key]; return v === undefined ? def : !v; };
 
 // ---------- ציון יכולת ----------
 const bandCls = s => (s === null || s === undefined ? 'na' : s >= 80 ? 'b4' : s >= 60 ? 'b3' : s >= 40 ? 'b2' : 'b1');
@@ -154,7 +155,7 @@ function timesSection(kid, xp, today) {
     ${a.weakFacts.length ? `<div><h4>תרגילים לחיזוק</h4><ul class="weakl">${a.weakFacts.map(w => `<li><b>${esc(w.text)}</b> (${w.right} נכון מתוך ${w.tries})<br>${esc(w.tip)}</li>`).join('')}</ul></div>` : ''}
     <div><h4>המלצות להמשך</h4><ul class="recs">${a.recommendations.map(r => `<li>${esc(r)}</li>`).join('')}</ul></div>
     ${series.length ? `<div><h4>דיוק יומי</h4>${chart(series)}</div><details><summary>טבלת ימים</summary>${table}</details>` : ''}`;
-  return section(kid.id + ':times', '✖️ לוח הכפל', ab.score, inner);
+  return inner;
 }
 
 
@@ -238,7 +239,7 @@ async function makePdf(id, btn) {
     const rep = A.buildReport(row.kid, row.profile, { today: E.dayKey() });
     host = document.createElement('div');
     host.className = 'pdfroot'; host.setAttribute('dir', 'rtl'); host.setAttribute('aria-hidden', 'true');
-    host.innerHTML = reportHtml(rep) + `<div class="pdf-full"><h2 class="pdf-h">כל התוצאות</h2>${kidCard(row)}</div>` + `<p class="p-sub note">הופק מ"חשבון יומי" · ${esc(rep.date)}</p>`;
+    host.innerHTML = reportHtml(rep) + `<div class="pdf-full"><h2 class="pdf-h">כל התוצאות</h2>${kidCard(row)}</div>` + `<p class="p-sub note">הופק מ"לומדים כל יום" · ${esc(rep.date)}</p>`;
     host.querySelectorAll('.kc-act, .kc-sub').forEach(e => e.remove());
     host.querySelectorAll('details').forEach(d => { d.open = true; });
     document.body.appendChild(host);
@@ -272,7 +273,7 @@ async function makePdf(id, btn) {
       ctx.drawImage(canvas, 0, Math.round(y0), canvas.width, h, 0, 0, canvas.width, h);
       ctx.strokeStyle = '#C9D2E8'; ctx.lineWidth = scale; ctx.beginPath(); ctx.moveTo(0, part.height - 24 * scale); ctx.lineTo(part.width, part.height - 24 * scale); ctx.stroke();
       ctx.fillStyle = '#55607A'; ctx.font = `${13 * scale}px ${fam}`; ctx.direction = 'rtl'; ctx.textAlign = 'right';
-      ctx.fillText(`חשבון יומי · ${row.kid.name} · ${rep.date}`, part.width - 4 * scale, part.height - 7 * scale);
+      ctx.fillText(`לומדים כל יום · ${row.kid.name} · ${rep.date}`, part.width - 4 * scale, part.height - 7 * scale);
       ctx.textAlign = 'left'; ctx.fillText(`עמוד ${i + 1} מתוך ${N}`, 4 * scale, part.height - 7 * scale);
       if (i) pdf.addPage();
       pdf.addImage(part.toDataURL('image/jpeg', 0.92), 'JPEG', m, m, canvas.width * ratio, part.height * ratio);
@@ -304,10 +305,10 @@ function kidCard(r) {
   const xp = profile.programs && profile.programs.times, xdays = (xp && xp.days) || {};
   const used = d => Object.keys(d).filter(k => d[k].answered > 0);
   const ep = profile.programs && profile.programs.english, edays = (ep && ep.days) || {};
-  const dayList = used(days).sort(), xList = used(xdays), eList = used(edays);
-  const lastDay = dayList.concat(xList, eList).sort().pop();
+  const gdays = (profile.programs && profile.programs.g4 && profile.programs.g4.days) || {};
+  const dayList = used(days).sort(), xList = used(xdays), eList = used(edays), gList = used(gdays);
+  const lastDay = dayList.concat(xList, eList, gList).sort().pop();
   const since = lastDay ? daysSince(lastDay) : null;
-  const testHtml = dayList.length ? testSection(kid, profile, sessions, dayList, today) : '';
   const mistakes = sessions.flatMap(s => (s.mistakes || []).map(m => Object.assign({ day: s.date }, m))).sort((x, y) => (y.t || y.day).localeCompare(x.t || x.day)).slice(0, 15);
   const mist = mistakes.length
     ? `<ul class="mist">${mistakes.map(m => `<li><div class="q"><b>${topic(m.topic).icon} ${esc(topic(m.topic).short)}</b> · ${dm(m.day)}<br>${esc(m.q)}</div><div class="a">${f ? 'ענתה' : 'ענה'}: <b dir="ltr">${esc(m.given)}</b> · נכון: <b dir="ltr">${esc(m.correct)}</b></div></li>`).join('')}</ul>`
@@ -318,15 +319,27 @@ function kidCard(r) {
     <summary class="kc-sum"><h2 class="kc-name">${esc(kid.emoji || '')} ${esc(kid.name)}</h2>${scoreChip(ov.score, 'ציון כללי')}<span class="p-sub kc-sub">${ov.score !== null ? `ציון כללי · ${esc(ov.band)}` : 'ציון כללי: לא זמין'} · מתמטיקה ${ov.math === null ? 'לא זמין' : ov.math} · אנגלית ${ov.english.score === null ? 'לא זמין' : ov.english.score}${lastDay ? ` · תרגול אחרון: ${since === 0 ? 'היום' : since === 1 ? 'אתמול' : dm(lastDay)}` : ''}${profile.streak ? ` · ${profile.streak} ${profile.streak === 1 ? 'יום' : 'ימים'} ברצף` : ''}</span></summary>
     ${since !== null && since >= 2 ? `<p class="warn">לא ${f ? 'תרגלה' : 'תרגל'} ${since} ימים (מאז ${dm(lastDay)}).</p>` : ''}
     <div class="kc-act"><button class="btn" data-act="report" data-id="${esc(kid.id)}">📄 סיכום להורים: חוזקות, קשיים והמלצות</button><button class="btn primary" data-act="pdf" data-id="${esc(kid.id)}">📤 PDF לשיתוף</button></div>
-    ${dayList.length ? testHtml : `<details class="prog-sec" data-open-key="${esc(kid.id)}:test0"${isOpen(kid.id + ':test0') ? ' open' : ''}><summary><span class="st-t">📝 הכנה למבדק</span>${scoreChip(null)}</summary><p class="empty">עוד לא התחיל${f ? 'ה' : ''} את ההכנה למבדק.</p></details>`}
-    ${xList.length ? timesSection(kid, xp, today) : `<details class="prog-sec" data-open-key="${esc(kid.id)}:times0"${isOpen(kid.id + ':times0') ? ' open' : ''}><summary><span class="st-t">✖️ לוח הכפל</span>${scoreChip(null)}</summary><p class="empty">עוד לא ${f ? 'תרגלה' : 'תרגל'} את לוח הכפל.</p></details>`}
-    ${eList.length ? englishSection(kid, ep, today) : `<details class="prog-sec" data-open-key="${esc(kid.id)}:english0"${isOpen(kid.id + ':english0') ? ' open' : ''}><summary><span class="st-t">🔤 אנגלית</span>${scoreChip(null)}</summary><p class="empty">עוד לא ${f ? 'התחילה' : 'התחיל'} ללמוד אנגלית.</p></details>`}
-    <details class="prog-sec"><summary><span class="st-t">טעויות אחרונות במתמטיקה (${mistakes.length})</span></summary>${mist}</details>
+    ${mathSubject(kid, profile, sessions, today, ov, mist, mistakes.length)}
+    ${englishSubject(kid, ep, today, ov, eList.length)}
   </details>`;
 }
 
 // ---------- אנגלית ----------
 const EN = window.EnglishEngine;
+function englishSubject(kid, ep, today, ov, n) {
+  const f = kid.gender === 'f';
+  if (!ep || !n) {
+    const e0 = EN.ensureProfile(ep ? ep : EN.newProfile());
+    const rows = EN.TOPICS.map(tp => trow(`${kid.id}:en:${tp.id}`, tp.icon, tp.title, 'עוד לא תורגל', null, `<p class="empty">עוד לא תורגל.</p><p class="p-sub note">לפי תוכנית הלימודים: ${esc(tp.curr)}</p>`)).join('');
+    return subj(`${kid.id}:english`, '🔤 אנגלית', null, `עוד לא ${f ? 'התחילה' : 'התחיל'} ללמוד אנגלית`, rows);
+  }
+  const s = englishSection(kid, ep, today), ab = ov.english;
+  const inc = (ab.areas || []).filter(a => a.included);
+  const sub = inc.length ? inc.slice(0, 4).map(a => `${a.title} ${a.score}`).join(' · ') : 'אין עדיין מספיק נתונים לציון';
+  return subj(`${kid.id}:english`, '🔤 אנגלית', s.score, sub, `${s.rows}
+    ${trow(`${kid.id}:en:more`, '📋', 'סיכום, חוזקות והמלצות באנגלית', 'ציון, גרף, תחומים וטבלת ימים', s.score, s.details)}
+    ${trow(`${kid.id}:en:curr`, '🏫', 'התאמה לתוכנית משרד החינוך', 'רשימות המילים ודרישות כיתה ד\'', null, s.curr)}`);
+}
 function englishSection(kid, ep, today) {
   EN.ensureProfile(ep);
   const ab = EN.abilityScore(ep), rep = EN.report(kid, ep), lk = EN.locks(ep), f = kid.gender === 'f';
@@ -351,6 +364,18 @@ function englishSection(kid, ep, today) {
   const pts = dl.filter(d => days[d].sc).slice(-30).map(d => ({ day: d, sc: days[d].sc, answered: days[d].answered }));
   const list = (arr, fn) => (arr.length ? `<ul>${arr.map(fn).join('')}</ul>` : '');
   const en = { answered: rep.engagement.answered, skips: rep.engagement.skips, partial: rep.engagement.partial, partialQ: rep.engagement.partialQ };
+  const detail = {
+    letters: `<div><h4>מפת האותיות</h4><div class="lgrid">${letters}</div><p class="p-sub note">בכל אות ארבע נקודות: שם · צליל · כתיבת גדולה · כתיבת קטנה. ירוק = בשליטה, צהוב = בלמידה, אדום = מתקשה, אפור = עוד לא תורגל.</p></div>`,
+    write: `<div class="timeblk"><h4>✍️ כתיבה באצבע</h4>${hwLine}</div>`,
+    words: `<div><h4>מילים (${known.length} נלמדו, ${EN.masteredList(ep, 'vocab').length} בשליטה)</h4>${known.length ? `<div class="wchips">${known.map(wchip).join('')}</div>` : '<p class="p-sub">עוד לא נלמדו מילים.</p>'}</div>`,
+    speak: `<div class="timeblk"><h4>🗣️ דיבור</h4>${spLine}</div>`,
+    talk: `<div><h4>ביטויים שנלמדו (${ep.intro.C.length} מתוך ${EN.CHUNKS.length})</h4>${ep.intro.C.length ? `<div class="wchips">${ep.intro.C.map(id => EN.CD[id]).filter(Boolean).map(c => { const b = EN.box(ep, 'chunk', 'K:' + c.id); return `<span class="wchip ${b >= EN.MASTER ? 'g' : 'm'}"><b dir="ltr">${esc(c.en)}</b> ${esc(c.he)}</span>`; }).join('')}</div>` : '<p class="p-sub">עוד לא נלמדו ביטויים.</p>'}</div>`,
+  };
+  const cur = EN.curriculum(ep);
+  const currHtml = `<p>התוכן באנגלית מותאם ל<b>תוכנית הלימודים באנגלית של משרד החינוך לבית הספר היסודי (2020)</b> ולרשימת המילים הרשמית <b>Lexical Pre-Band I &amp; Band I, Elementary School</b> (נובמבר 2020). לפי התוכנית, כיתה ד' נמצאת בסוף שלב Pre-A1 (Pre-Band I) ובתחילת A1 (Band I Core I).</p>
+    <div class="tscroll"><table class="t"><thead><tr><th>רשימה</th><th class="n">במאגר</th><th class="n">נלמדו</th><th class="n">בשליטה</th></tr></thead><tbody>${['PB', 'C1', 'C2'].map(b => `<tr><td dir="ltr" style="text-align:right">${cur[b].label}</td><td class="n">${cur[b].inBank}</td><td class="n">${cur[b].learned}</td><td class="n">${cur[b].mastered}</td></tr>`).join('')}</tbody></table></div>
+    <p class="p-sub note">"במאגר" הוא מספר המילים מכל רשימה שיש להן תרגול באפליקציה (בעיקר מילים שאפשר להציג בתמונה או בתרגום). הרשימות הרשמיות כוללות גם מילות קישור ומילים דקדוקיות (a, the, is, of…) שמתורגלות בתוך משפטים ולא כמילים בודדות. סיווג המילים לרשימות נבדק מול מסמך משרד החינוך בקריאה אוטומטית, ולכן ייתכנו טעויות בודדות.</p>
+    <ul class="currl">${EN.TOPICS.map(t => `<li><b>${t.icon} ${esc(t.title)}:</b> ${esc(t.curr)}</li>`).join('')}</ul>`;
   const inner = `<div class="scoreblk"><div class="sc-h"><h4>ציון יכולת באנגלית</h4>${scoreChip(ab.score)}${ab.score !== null ? `<span class="p-sub">${esc(A.band(ab.score))}</span>` : ''}</div>
       ${ab.score !== null ? `<div class="scbar" aria-hidden="true"><i class="${bandCls(ab.score)}" style="width:${ab.score}%"></i></div>` : `<p class="p-sub">לא זמין: ${esc(ab.need)}</p>`}
       <ul class="topsc">${ab.areas.filter(a => a.included).map(a => `<li><span>${a.icon} ${esc(a.title)}</span>${scoreChip(a.score)}</li>`).join('')}</ul>
@@ -359,14 +384,57 @@ function englishSection(kid, ep, today) {
     ${engagementLine(en)}
     <section class="summary"><h3>סיכום</h3>${(rep.summaryParas || []).map(x => `<p>${esc(x)}</p>`).join('')}<p>היום: ${t.answered} משימות באנגלית.</p></section>
     <div><h4>תמונת מצב לפי תחום</h4><div class="tscroll"><table class="t en-areas"><thead><tr><th>תחום</th><th class="n">בשליטה</th><th class="n">דיוק אחרון</th><th class="n">תשובות</th><th>מצב</th></tr></thead><tbody>${rows}</tbody></table></div></div>
-    <div><h4>מפת האותיות</h4><div class="lgrid">${letters}</div><p class="p-sub note">בכל אות ארבע נקודות: שם · צליל · כתיבת גדולה · כתיבת קטנה. ירוק = בשליטה, צהוב = בלמידה, אדום = מתקשה, אפור = עוד לא תורגל.</p></div>
-    <div><h4>מילים (${known.length} נלמדו, ${EN.masteredList(ep, 'vocab').length} בשליטה)</h4>${known.length ? `<div class="wchips">${known.map(wchip).join('')}</div>` : '<p class="p-sub">עוד לא נלמדו מילים.</p>'}</div>
     <div><h4>מה חזק</h4>${rep.strengths.length ? list(rep.strengths, s => `<li><b>${esc(s.title)}</b>${s.evidence ? ` <span class="p-sub">(${esc(s.evidence)})</span>` : ''}</li>`) : '<p class="p-sub">עדיין לא זוהה תחום חזק במובהק. נדרש עוד תרגול.</p>'}</div>
     <div><h4>מה דורש חיזוק, למה, ואיך עוזרים</h4>${rep.focus.length ? rep.focus.map(x => `<div class="focus"><b>${esc(x.title)}</b>${x.evidence ? `<div class="p-sub">${esc(x.evidence)}</div>` : ''}<div class="why"><b>למה זה קשה:</b>${list(x.why, w => `<li>${esc(w)}</li>`)}</div><div class="how"><b>איך משפרים:</b>${list(x.how, h => `<li>${esc(h)}</li>`)}</div></div>`).join('') : '<p class="p-sub">לא זוהו תחומים חלשים במובהק.</p>'}</div>
-    <div class="timeblk"><h4>✍️ כתיבה באצבע</h4>${hwLine}</div>
-    <div class="timeblk"><h4>🗣️ דיבור</h4>${spLine}</div>
     ${series.length ? `<div><h4>דיוק יומי</h4>${chart(series)}</div><details><summary>טבלת ימים</summary><div class="tscroll">${table}</div></details>` : ''}`;
-  return section(kid.id + ':english', '🔤 אנגלית', ab.score, inner);
+  // שורות לפי הנושאים שהילד רואה בתפריט, עם ציון לכל נושא (ממוצע התחומים שיש להם ציון)
+  const areaRow = a => `<tr><td>${a.icon} ${esc(a.title)}</td><td class="n">${a.mastered} מתוך ${a.target}</td><td class="n">${a.acc === null ? 'לא זמין' : Math.round(a.acc * 100) + '%'}</td><td class="n">${a.answered}</td><td>${status(a)}</td></tr>`;
+  const topicRows = EN.TOPICS.map(tp => {
+    const ar = tp.areas.map(id => ab.areas.find(a => a.id === id)), inc = ar.filter(a => a.included);
+    const score = inc.length ? Math.round(inc.reduce((x, a) => x + a.score, 0) / inc.length) : null;
+    const ans = ar.reduce((x, a) => x + a.answered, 0);
+    const sub = lk[tp.id] && !ans ? 'נעול: ' + lk[tp.id].need : ans ? `${ans} תשובות · ${ar.map(a => `${a.mastered}/${a.target} ${a.unit}`).join(' · ')}` : 'עוד לא תורגל';
+    const det = { letters: detail.letters, write: detail.write, words: detail.words, speak: detail.speak, talk: detail.talk }[tp.id] || '';
+    return trow(`${kid.id}:en:${tp.id}`, tp.icon, tp.title, sub, score, `<div class="tscroll"><table class="t en-areas"><thead><tr><th>תחום</th><th class="n">בשליטה</th><th class="n">דיוק אחרון</th><th class="n">תשובות</th><th>מצב</th></tr></thead><tbody>${ar.map(areaRow).join('')}</tbody></table></div>${det}<p class="p-sub note">לפי תוכנית הלימודים: ${esc(tp.curr)}</p>`);
+  }).join('');
+  return { score: ab.score, rows: topicRows, details: inner, curr: currHtml };
+}
+// שורה של נושא: נפתחת בלחיצה
+const trow = (key, icon, title, sub, score, inner) => `<details class="tpr" data-open-key="${esc(key)}"${isOpen(key, false) ? ' open' : ''}><summary><span class="tr-ic" aria-hidden="true">${icon}</span><span class="tr-t"><b>${esc(title)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span>${scoreChip(score)}</summary><div class="tr-in">${inner}</div></details>`;
+const subj = (key, title, score, sub, inner) => `<details class="subj-sec" data-open-key="${esc(key)}"${isOpen(key, false) ? ' open' : ''}><summary><span class="st-t">${title}</span>${scoreChip(score)}<span class="p-sub sj-sub">${esc(sub)}</span></summary><p class="p-sub hint">לחצו על נושא כדי לראות את הפירוט.</p>${inner}</details>`;
+// פירוט לנושא מ"כל נושאי כיתה ד'"
+function g4Detail(g, ts, id) {
+  const st = g.stats[id] || {}, h = g.hist[id] || '', bl = g.baseline[id] || { n: 0 }, tp = G4.TOPICS.find(t => t.id === id);
+  if (!st.answered) return `<p class="empty">עוד לא תורגל. ${esc(tp.name)}.</p>`;
+  const lv = g.levels[id], weak = ts && ts.included && (ts.acc < 0.6 || ts.level <= 1);
+  return `<div class="bar" aria-hidden="true">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= lv ? 'on' : ''}"></i>`).join('')}</div>
+    <dl class="cmp"><div><dt>התחלה</dt><dd>${bl.n >= 10 ? Math.round(100 * bl.c / bl.n) + '%' : 'לא זמין'}</dd></div><div><dt>עכשיו</dt><dd>רמה ${lv} (${E.LEVEL_NAMES[lv]})${h.length ? ` · ${Math.round(100 * [...h.slice(-15)].filter(c => c === '1').length / h.slice(-15).length)}%` : ''}</dd></div><div><dt>תשובות</dt><dd>${st.answered}</dd></div></dl>
+    ${st.tn ? `<p class="p-sub">זמן ממוצע לשאלה: ${I.fmtAvg(st.ms / st.tn)}</p>` : ''}
+    ${weak ? `<div class="focus"><div class="why"><b>למה זה קשה:</b> ${esc(G4.WHY[id])}</div><div class="how"><b>איך משפרים:</b><ul>${G4.HOW[id].map(x => `<li>${esc(x)}</li>`).join('')}</ul></div></div>` : ''}
+    <p class="p-sub note">לפי תוכנית הלימודים לכיתה ד': ${esc(tp.name)} (${esc(tp.area)}).</p>`;
+}
+function mathSubject(kid, profile, sessions, today, ov, mist, nMist) {
+  const f = kid.gender === 'f', days = profile.days || {};
+  const used = d => Object.keys(d || {}).filter(k => d[k].answered > 0);
+  const dayList = used(days).sort();
+  const xp = profile.programs && profile.programs.times, gp = profile.programs && profile.programs.g4;
+  const g = G4.ensureProfile(gp ? gp : G4.newProfile());
+  const a = dayList.length ? I.analyzeKid(profile, { name: kid.name, gender: kid.gender, today }) : null;
+  const tsc = id => (ov.test.topics || []).find(t => t.id === id);
+  const subT = (ts, st, lv) => (st && st.answered ? `רמה ${lv} · ${st.answered} תשובות${ts && ts.included ? ` · ${Math.round(ts.acc * 100)}% לאחרונה` : ''}` : 'עוד לא תורגל');
+  const testRows = E.TOPICS.map(t => { const ts = tsc(t.id), st = (profile.stats || {})[t.id], blk = a && a.topics.find(x => x.id === t.id);
+    return trow(`${kid.id}:m:${t.id}`, t.icon, t.short, subT(ts, st, (profile.levels || {})[t.id] || 1), ts && ts.included ? ts.score : null, blk && st && st.answered ? topicBlock(blk) : '<p class="empty">עוד לא תורגל.</p>'); }).join('');
+  const testMore = dayList.length ? trow(`${kid.id}:m:testmore`, '📋', 'סיכום ופרטים: הכנה למבדק', 'ציון, גרף, זמנים וטבלת ימים', ov.test.score, testSection(kid, profile, sessions, dayList, today)) : '';
+  const xList = used(xp && xp.days);
+  const timesRow = trow(`${kid.id}:m:times`, '✖️', 'לוח הכפל', xList.length ? `רמה ${xp.levels.times} · ${xp.stats.times.answered} תשובות` : 'עוד לא תורגל', ov.times.score, xList.length ? timesSection(kid, xp, today) : `<p class="empty">עוד לא ${f ? 'תרגלה' : 'תרגל'} את לוח הכפל.</p>`);
+  const g4Rows = G4.TOPICS.map(t => { const ts = (ov.g4.topics || []).find(x => x.id === t.id), st = g.stats[t.id];
+    return trow(`${kid.id}:g4:${t.id}`, t.icon, t.short, subT(ts, st, g.levels[t.id]), ts && ts.included ? ts.score : null, g4Detail(g, ts, t.id)); }).join('');
+  const sub = `הכנה למבדק ${ov.test.score === null ? 'לא זמין' : ov.test.score} · לוח הכפל ${ov.times.score === null ? 'לא זמין' : ov.times.score} · כיתה ד' ${ov.g4.score === null ? 'לא זמין' : ov.g4.score}`;
+  const inner = `<h4 class="grp">📝 הכנה למבדק ${scoreChip(ov.test.score)}</h4>${testRows}${testMore}
+    <h4 class="grp">✖️ לוח הכפל ${scoreChip(ov.times.score)}</h4>${timesRow}
+    <h4 class="grp">🎓 כל נושאי כיתה ד' ${scoreChip(ov.g4.score)}</h4><p class="p-sub">נושאים מתוכנית הלימודים במתמטיקה של משרד החינוך לכיתה ד' שאינם בחוברת המבדק.${ov.g4.score === null && G4.used(g) ? ' ' + esc(ov.g4.need) : ''}</p>${g4Rows}
+    ${trow(`${kid.id}:m:mist`, '❗', 'טעויות אחרונות', `${nMist} טעויות שמורות`, null, mist)}`;
+  return subj(`${kid.id}:math`, '🔢 מתמטיקה', ov.math, sub, inner);
 }
 
 function testSection(kid, profile, sessions, dayList, today) {
@@ -390,7 +458,7 @@ function testSection(kid, profile, sessions, dayList, today) {
     ${series.length ? `<div><h4>דיוק יומי</h4>${chart(series)}</div>` : ''}
     ${tmHtml}
     <details><summary>טבלת ימים</summary>${table}</details>`;
-  return section(kid.id + ':test', '📝 הכנה למבדק', ab.score, inner);
+  return inner;
 }
 
 const isOwner = () => !!user && fam && fam.ownerUid === user.uid;
@@ -501,7 +569,7 @@ app.addEventListener('click', async e => {
   if (/^r(download|copy|share|print|close)$/.test(act)) return reportAction(act);
   if (act === 'openall' || act === 'closeall') {
     const open = act === 'openall', c = readClosed();
-    document.querySelectorAll('details[data-open-key]').forEach(d => { d.open = open; const k = d.dataset.openKey; if (open) delete c[k]; else c[k] = 1; });
+    document.querySelectorAll('details[data-open-key]').forEach(d => { d.open = open; const k = d.dataset.openKey; c[k] = open ? 0 : 1; });
     writeClosed(c); return;
   }
   if (act === 'copy') {
@@ -547,7 +615,7 @@ app.addEventListener('submit', async e => {
 app.addEventListener('toggle', e => {
   const d = e.target, k = d && d.dataset && d.dataset.openKey;
   if (!k) return;
-  const c = readClosed(); if (d.open) delete c[k]; else c[k] = 1; writeClosed(c);
+  const c = readClosed(); c[k] = d.open ? 0 : 1; writeClosed(c);
 }, true);
 
 window.__parent = { fromLocal, kidCard };

@@ -3,7 +3,7 @@ import { getFamily, joinFamily, refreshFamily, leaveFamily, loadKid, saveKid, re
 import { normCode, showCode } from './family.js';
 import * as EUI from './english-ui.js';
 
-const E = window.MathEngine, I = window.Insights, T = window.TimesEngine, A = window.Ability, EN = window.EnglishEngine;
+const E = window.MathEngine, I = window.Insights, T = window.TimesEngine, A = window.Ability, EN = window.EnglishEngine, G4 = window.Grade4;
 const app = document.getElementById('app');
 const ME = 'mathapp:v2:me';
 
@@ -29,10 +29,11 @@ function eqHtml(s) {
 const eqSize = s => (plain(s).length > 26 ? 'sm' : plain(s).length > 16 ? 'md' : '');
 // תוכניות תרגול: "test" (הכנה למבדק, 5 נושאים) ו-"times" (לוח הכפל). להוספת תוכנית חדשה ראו README.
 const TIMES_META = { id: 'times', short: 'לוח הכפל', icon: '✖️' };
-const topicOf = id => (id === 'times' ? TIMES_META : E.TOPICS.find(t => t.id === id));
+const topicOf = id => (id === 'times' ? TIMES_META : E.TOPICS.find(t => t.id === id) || G4.TOPICS.find(t => t.id === id));
+const isG4 = id => G4.IDS.includes(id);
 const inT = short => 'ב' + String(short).replace(/^ה/, ''); // "בלוח הכפל", "במיליון"
-const levelOf = id => (id === 'times' ? data.programs.times.levels.times : data.profile.levels[id]);
-const profileOf = program => (program === 'times' ? data.programs.times : data.profile);
+const levelOf = id => (id === 'times' ? data.programs.times.levels.times : isG4(id) ? data.programs.g4.levels[id] : data.profile.levels[id]);
+const profileOf = program => (program === 'times' ? data.programs.times : program === 'g4' ? data.programs.g4 : data.profile);
 const isLtrChoice = c => /^[\d,<>=+\-×÷ .▢]+$/.test(c);
 const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const g = (m, f) => (kid && kid.gender === 'f' ? f : m);
@@ -56,10 +57,12 @@ const syncText = s => ({ ok: 'התוצאות נשלחו להורים ✓', pendi
 
 // ---------- נושאים: צבע, תיאור ואנימציית פתיחה ----------
 const TAG = {
+  numline: 'ישר המספרים ומספרים שליליים', gematria: 'מספרים באותיות עבריות', order: 'סדר פעולות, 0 ו-1 וחזקות', divis: 'סימני התחלקות ומספרים ראשוניים',
+  fracops: 'חיבור וחיסור שברים', measure: 'שטח, היקף, נפח וזמן', data: 'דיאגרמות וסיכויים', shapes: 'משולשים, תיבות וסימטרייה',
   million: 'מספרים גדולים עד מיליון', addsub: 'חיבור, חיסור ובעיות מילוליות', fractions: 'חלקים של שלם',
   muldiv: 'כפל, חילוק ושארית', geometry: 'צורות, צלעות ואלכסונים', times: 'כפל וחילוק עד 100',
 };
-const BURST = { million: '✨', addsub: '➕', fractions: '🍕', muldiv: '✖️', geometry: '🔷', times: '⭐' };
+const BURST = { numline: '📏', gematria: '✡️', order: '🧮', divis: '🔍', fracops: '🥧', measure: '📐', data: '📊', shapes: '🔺', million: '✨', addsub: '➕', fractions: '🍕', muldiv: '✖️', geometry: '🔷', times: '⭐' };
 function slicePath(i, n, r, cx, cy) {
   const a0 = (i / n) * 2 * Math.PI - Math.PI / 2, a1 = ((i + 1) / n) * 2 * Math.PI - Math.PI / 2;
   const p = (a) => `${(cx + r * Math.cos(a)).toFixed(1)} ${(cy + r * Math.sin(a)).toFixed(1)}`;
@@ -87,6 +90,7 @@ function hero(id) {
     return `<div class="hero h-times" aria-hidden="true"><div class="jump"><span class="frog"><i>🐸</i></span></div>
       <div class="nline">${[0, 4, 8, 12, 16, 20].map(n => `<b>${n}</b>`).join('')}</div><div class="eqn">4 × 5 = 20</div></div>`;
   }
+  if (isG4(id)) { const t = topicOf(id); return `<div class="hero h-g4" aria-hidden="true"><b class="g4ic">${t.icon}</b><i class="sp" style="--x:14%;--y:22%;--d:0s">✦</i><i class="sp" style="--x:84%;--y:30%;--d:.7s">✦</i><i class="sp" style="--x:72%;--y:80%;--d:1.2s">✦</i></div>`; }
   const pts = Array.from({ length: 6 }, (_, i) => { const a = (i / 6) * 2 * Math.PI - Math.PI / 2; return [70 + 52 * Math.cos(a), 70 + 52 * Math.sin(a)]; });
   const pp = pts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ');
   return `<div class="hero h-geometry" aria-hidden="true"><svg viewBox="0 0 140 140"><polygon class="shape" points="${pp}"/>
@@ -175,12 +179,13 @@ function viewWho() {
 
 function viewHome() {
   view = 'home'; run = null;
-  const today = E.dayKey(), tp = data.profile, xp = data.programs.times, ep = data.programs.english;
-  const dt = tp.days[today] || { answered: 0, correct: 0, rounds: 0 }, dx = xp.days[today] || { answered: 0, correct: 0, rounds: 0 }, de = ep.days[today] || { answered: 0, rounds: 0 };
+  const today = E.dayKey(), tp = data.profile, xp = data.programs.times, ep = data.programs.english, gp = data.programs.g4;
+  const dt0 = tp.days[today] || { answered: 0, correct: 0, rounds: 0 }, dg = gp.days[today] || { answered: 0, rounds: 0 };
+  const dt = { answered: dt0.answered + dg.answered, rounds: (dt0.rounds || 0) + (dg.rounds || 0) }, dx = xp.days[today] || { answered: 0, correct: 0, rounds: 0 }, de = ep.days[today] || { answered: 0, rounds: 0 };
   const streak = T.streakAny(tp, xp, undefined, ep);
   const answered = dt.answered + dx.answered + de.answered, rounds = (dt.rounds || 0) + (dx.rounds || 0) + (de.rounds || 0);
   const goal = Math.min(1, Math.max(dt.answered / E.ROUND_MIN, dx.answered / T.PER_SESSION, de.answered / 8));
-  const sumSt = pr => Object.keys(pr.days || {}).reduce((s, d) => s + (pr.days[d].st || 0), 0), totalStars = sumSt(tp) + sumSt(xp) + sumSt(ep);
+  const sumSt = pr => Object.keys(pr.days || {}).reduce((s, d) => s + (pr.days[d].st || 0), 0), totalStars = sumSt(tp) + sumSt(xp) + sumSt(ep) + sumSt(gp);
   const cd = countdownText();
   app.innerHTML = `<main class="screen">
     <div class="top"><div class="greet"><div class="hm" aria-hidden="true">${mascot('happy')}</div><div><h1>שלום ${esc(kid.name)} ${esc(kid.emoji || '')}</h1><p class="ev">${esc(g('מוכן', 'מוכנה'))} להרפתקה של היום?</p></div></div><button class="link" data-act="switch">לא ${esc(kid.name)}?</button></div>
@@ -194,7 +199,7 @@ function viewHome() {
     <div class="subjects">
       <button class="subj s-math" data-act="subject" data-s="math" aria-label="מתמטיקה">
         <span class="sj-ic" aria-hidden="true"><b class="d1">7</b><b class="op">×</b><b class="d2">3</b></span>
-        <span class="sj-tx"><b>מתמטיקה</b><small>הכנה למבדק · לוח הכפל</small>${cd ? `<small class="cdm">${esc(cd)}</small>` : ''}</span>
+        <span class="sj-tx"><b>מתמטיקה</b><small>הכנה למבדק · לוח הכפל · כל נושאי כיתה ד'</small>${cd ? `<small class="cdm">${esc(cd)}</small>` : ''}</span>
         <span class="sj-go" aria-hidden="true">←</span></button>
       <button class="subj s-eng" data-act="subject" data-s="english" aria-label="אנגלית">
         <span class="sj-ic" aria-hidden="true"><b class="d1">A</b><b class="op">b</b><b class="d2">C</b></span>
@@ -206,8 +211,8 @@ function viewHome() {
 }
 function viewMath() {
   view = 'math'; run = null;
-  const today = E.dayKey(), tp = data.profile, xp = data.programs.times;
-  const dt = tp.days[today] || { answered: 0, correct: 0, rounds: 0 }, dx = xp.days[today] || { answered: 0, correct: 0, rounds: 0 };
+  const today = E.dayKey(), tp = data.profile, xp = data.programs.times, g4 = data.programs.g4;
+  const dt = tp.days[today] || { answered: 0, correct: 0, rounds: 0 }, dx = xp.days[today] || { answered: 0, correct: 0, rounds: 0 }, dg = g4.days[today] || { answered: 0, rounds: 0 };
   const cd = countdownText(), lvX = xp.levels.times;
   const labT = (dt.rounds || 0) > 0 ? 'סבב נוסף' : dt.answered > 0 ? 'ממשיכים' : 'מתחילים';
   const labX = (dx.rounds || 0) > 0 ? 'עוד תרגול' : 'מתחילים';
@@ -215,7 +220,7 @@ function viewMath() {
     <div class="sub-top"><button class="back" data-act="home" aria-label="חזרה לבחירת מקצוע">→</button><h1>🔢 מתמטיקה</h1></div>
     <p class="lead pick">מה מתרגלים?</p>
     <section class="prog t-test" aria-label="הכנה למבדק">
-      <div class="ph"><span class="pi" aria-hidden="true"><i>📝</i><b class="fl f1">➕</b><b class="fl f2">🔷</b><b class="fl f3">🍕</b></span><div><h2>הכנה למבדק</h2><p class="ev">5 נושאים, 3 עד 5 שאלות בכל נושא</p></div></div>
+      <div class="ph"><span class="pi" aria-hidden="true"><i>📝</i><b class="fl f1">➕</b><b class="fl f2">🔷</b><b class="fl f3">🍕</b></span><div><h2>הכנה למבדק</h2><p class="ev">5 נושאי המבדק של בית הספר, 3 עד 5 שאלות בכל נושא</p></div></div>
       ${cd ? `<div class="countdown">${esc(cd)}</div>` : ''}
       <ul class="minilv" aria-label="רמות לפי נושא">${E.TOPICS.map(t => `<li aria-label="${esc(t.short)}, רמה ${tp.levels[t.id]}"><span aria-hidden="true">${t.icon}</span><b>${tp.levels[t.id]}</b></li>`).join('')}</ul>
       <button class="btn primary big" data-act="start" data-program="test">${labT}</button>
@@ -224,6 +229,11 @@ function viewMath() {
       <div class="ph"><span class="pi" aria-hidden="true"><i>✖️</i><b class="fl f1">7</b><b class="fl f2">🐸</b><b class="fl f3">9</b></span><div><h2>לוח הכפל</h2><p class="ev">10 שאלות, עד 100${lvX >= T.DIVISION_FROM ? ', כולל חילוק' : ''}</p></div></div>
       <div class="lvrow"><span class="pips" aria-hidden="true">${[1, 2, 3, 4, 5].map(i => `<i class="${i <= lvX ? 'on' : ''}"></i>`).join('')}</span><span class="ev">רמה ${lvX} · ${E.LEVEL_NAMES[lvX]}: ${T.LEVEL_INFO[lvX]}</span></div>
       <button class="btn primary big" data-act="start" data-program="times">${labX}</button>
+    </section>
+    <section class="prog t-g4" aria-label="כל נושאי כיתה ד'">
+      <div class="ph"><span class="pi" aria-hidden="true"><i>🎓</i><b class="fl f1">📊</b><b class="fl f2">א</b><b class="fl f3">🔺</b></span><div><h2>כל נושאי כיתה ד'</h2><p class="ev">נושאים נוספים מתוכנית משרד החינוך, 4 נושאים בכל סבב</p></div></div>
+      <ul class="minilv g4lv" aria-label="רמות לפי נושא">${G4.TOPICS.map(t => `<li aria-label="${esc(t.short)}, רמה ${g4.levels[t.id]}"><span aria-hidden="true">${t.icon}</span><b>${g4.levels[t.id]}</b></li>`).join('')}</ul>
+      <button class="btn primary big" data-act="start" data-program="g4">${(dg.rounds || 0) > 0 ? 'עוד סבב' : 'מתחילים'}</button>
     </section>
     <p class="sync" id="sync">${syncText(getStatus())}</p>
   </main>`;
@@ -327,9 +337,9 @@ document.addEventListener('visibilitychange', () => {
 
 // ---------- מהלך סבב ----------
 function startRun(program) {
-  program = program === 'times' ? 'times' : 'test';
+  program = program === 'times' || program === 'g4' ? program : 'test';
   const rng = E.mulberry32((Date.now() ^ 0x5bd1e995) >>> 0);
-  const plan = program === 'times' ? [{ topic: 'times', count: T.PER_SESSION }] : E.planRound(data.profile, rng);
+  const plan = program === 'times' ? [{ topic: 'times', count: T.PER_SESSION }] : program === 'g4' ? G4.planRound(data.programs.g4, rng) : E.planRound(data.profile, rng);
   run = {
     program, rng, plan, b: 0, qi: 0, correct: 0, ms: 0, stars: 0, skips: 0, fresh: 0, skipped: [], partial: false, seen: new Set(), events: [], typed: '', locked: false, q: null, fb: null,
     blocks: plan.map(p => ({ id: p.topic, n: 0, ok: 0, sk: 0, levelBefore: levelOf(p.topic), levelAfter: levelOf(p.topic), results: [] })),
@@ -347,6 +357,9 @@ function nextQ() {
   let q;
   if (run.fresh >= b.count && run.skipped.length) {
     q = run.skipped.shift(); // שאלה שדילגו עליה חוזרת בסוף אותו חלק (ואי אפשר לדלג עליה שוב)
+  } else if (run.program === 'g4') {
+    for (let t = 0; t < 20; t++) { q = G4.generateQuestion(topic, levelOf(topic), run.rng); if (!run.seen.has(E.qKey(q))) break; }
+    run.seen.add(E.qKey(q)); run.fresh++;
   } else if (run.program === 'times') {
     q = T.generateQuestion(data.programs.times, levelOf('times'), run.rng, run.seen);
     run.seen.add(T.seenKey(q)); run.seen.add('f:' + q.fact); // לוח הכפל: חזרה בין סבבים רצויה, ולכן בלי "recent"
@@ -370,7 +383,7 @@ function skipQ() {
   const q = run.q, day = E.dayKey();
   clockStop();
   q.retried = true;
-  if (run.program === 'times') T.recordSkip(data.programs.times, q, day); else E.recordSkip(data.profile, q.topic, day, q.skill);
+  if (run.program === 'times') T.recordSkip(data.programs.times, q, day); else E.recordSkip(profileOf(run.program), q.topic, day, q.skill);
   const s = sessionOf(day), bt = s.byTopic[q.topic] || (s.byTopic[q.topic] = { answered: 0, correct: 0 });
   bt.sk = (bt.sk || 0) + 1;
   run.blocks[run.b].sk++; run.skips++;
@@ -408,7 +421,7 @@ function recordPartial() {
 }
 // צילום יומי של ציון היכולת (לגרף ההתקדמות של ההורה). נשמר רק כשיש נתונים מספיקים.
 function snapshotScore(program, day) {
-  const prof = profileOf(program), r = A.abilityScore(program === 'times' ? prof : data.profile, program);
+  const prof = profileOf(program), r = A.abilityScore(prof, program);
   if (r.score !== null && prof.days[day]) prof.days[day].sc = r.score;
 }
 function sessionOf(day) {
@@ -433,8 +446,9 @@ function finishRound(partial) {
       T.logRound(data.programs.times, day, { n: b.n, ok: b.ok, ms: run.ms, lv: b.levelBefore, sk: run.skips });
     }
   } else {
-    run.fb = I.kidFeedback({ topics: done, prev: data.lastRound, seed: Date.now() % 997 });
-    if (!partial) data.lastRound = Object.fromEntries(run.blocks.map(b => [b.id, { n: b.n, ok: b.ok }]));
+    const g = run.program === 'g4';
+    run.fb = I.kidFeedback({ topics: done, prev: g ? data.lastG4 : data.lastRound, seed: Date.now() % 997 });
+    if (!partial) { const lr = Object.fromEntries(run.blocks.map(b => [b.id, { n: b.n, ok: b.ok }])); if (g) data.lastG4 = lr; else data.lastRound = lr; }
   }
   snapshotScore(run.program, day);
   saveKid(kid.id, data, day);
@@ -464,8 +478,8 @@ function submit(given, btnIndex) {
   const ms = Math.min(E.TIME_CAP_MS, Math.round(clockStop()));
   const ok = E.checkAnswer(q, given);
   const before = Object.assign({}, data.profile.levels);
-  const res = run.program === 'times' ? T.record(data.programs.times, q, ok, E.dayKey()) : E.recordAnswer(data.profile, q.topic, ok, E.dayKey(), q.skill);
-  if (run.program === 'times') T.recordTime(data.programs.times, q, E.dayKey(), ms, ok); else E.recordTime(data.profile, q.topic, E.dayKey(), ms, ok);
+  const res = run.program === 'times' ? T.record(data.programs.times, q, ok, E.dayKey()) : E.recordAnswer(profileOf(run.program), q.topic, ok, E.dayKey(), q.skill);
+  if (run.program === 'times') T.recordTime(data.programs.times, q, E.dayKey(), ms, ok); else E.recordTime(profileOf(run.program), q.topic, E.dayKey(), ms, ok);
   if (ok) { const dd = profileOf(run.program).days[E.dayKey()]; dd.st = (dd.st || 0) + 1; run.stars++; } // כוכב על כל תשובה נכונה
   run.ms += ms;
   if (ok) run.correct++;

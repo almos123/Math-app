@@ -5,24 +5,27 @@
    2) מהירות: רק בתשובות נכונות, מול זמן יעד לנושא. משפיעה עד 12% מהציון, כדי שהבנה תישאר הגורם המרכזי.
    ציון מוצג רק כשיש מספיק נתונים. אחרת: "לא זמין". */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./insights.js'), require('./engine.js'), require('./times.js'), require('./english.js'));
-  else root.Ability = factory(root.Insights, root.MathEngine, root.TimesEngine, root.EnglishEngine);
-})(typeof self !== 'undefined' ? self : this, function (I, E, T, EN) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./insights.js'), require('./engine.js'), require('./times.js'), require('./english.js'), require('./g4.js'));
+  else root.Ability = factory(root.Insights, root.MathEngine, root.TimesEngine, root.EnglishEngine, root.Grade4);
+})(typeof self !== 'undefined' ? self : this, function (I, E, T, EN, G4) {
   'use strict';
 
   // זמני יעד לתשובה נכונה (מילי-שניות). אלה פרמטרים של המערכת ולא מדד רשמי; ניתן לשנות כאן.
-  const TARGET_MS = { million: 20000, addsub: 25000, fractions: 25000, muldiv: 30000, geometry: 20000, times: 6000 };
+  const TARGET_MS = { million: 20000, addsub: 25000, fractions: 25000, muldiv: 30000, geometry: 20000, times: 6000,
+    numline: 20000, gematria: 20000, order: 30000, divis: 25000, fracops: 30000, measure: 30000, data: 25000, shapes: 25000 };
   const MIN_TOPIC = 8;            // תשובות אחרונות בנושא כדי שייכנס לציון
   const SPEED_WEIGHT = 0.12;      // כמה הציון יכול לרדת בגלל איטיות (ברירת מחדל ניטרלית כשאין נתוני זמן)
   const TEST_TOPICS = ['million', 'addsub', 'fractions', 'muldiv', 'geometry'];
   const PROGRAMS = {
     test: { id: 'test', title: 'הכנה למבדק', icon: '📝', topics: TEST_TOPICS, minTopics: 3, minAnswers: 30 },
     times: { id: 'times', title: 'לוח הכפל', icon: '✖️', topics: ['times'], minTopics: 1, minAnswers: 15 },
+    g4: { id: 'g4', title: "כל נושאי כיתה ד'", icon: '🎓', topics: G4 ? G4.IDS : [], minTopics: 3, minAnswers: 30 },
   };
   const SHORT = Object.assign({}, I.SHORT, { times: 'לוח הכפל' });
   const pct = x => Math.round(x * 100);
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const g = (gender, m, f) => (gender === 'f' ? f : m);
+  const g2 = g;
 
   function band(score) {
     if (score === null || score === undefined) return null;
@@ -61,6 +64,7 @@
     if (!out.enough) {
       out.need = program === 'times'
         ? `נדרשות לפחות ${P.minAnswers} תשובות בלוח הכפל (כרגע ${out.answered}).`
+        : program === 'g4' ? `נדרשות לפחות ${P.minAnswers} תשובות ולפחות ${P.minTopics} נושאים עם ${MIN_TOPIC} תשובות אחרונות או יותר (כרגע ${out.answered} תשובות, ${inc.length} נושאים).`
         : `נדרשות לפחות ${P.minAnswers} תשובות ולפחות ${P.minTopics} נושאים עם ${MIN_TOPIC} תשובות אחרונות או יותר (כרגע ${out.answered} תשובות, ${inc.length} נושאים).`;
       return out;
     }
@@ -78,11 +82,13 @@
     const times = abilityScore(xp, 'times');
     const ep = profile && profile.programs && profile.programs.english;
     const english = EN && ep ? EN.abilityScore(EN.ensureProfile(ep)) : { score: null, need: 'אין נתונים', areas: [] };
-    const mh = [test, times].filter(x => x.score !== null);
+    const gp = profile && profile.programs && profile.programs.g4;
+    const g4 = G4 && gp ? abilityScore(G4.ensureProfile(gp), 'g4') : { score: null, topics: [], need: 'אין נתונים' };
+    const mh = [test, times, g4].filter(x => x.score !== null);
     const math = mh.length ? Math.round(mh.reduce((a, x) => a + x.score, 0) / mh.length) : null;
     const have = [math, english.score].filter(x => x !== null);
     const score = have.length ? Math.round(have.reduce((a, x) => a + x, 0) / have.length) : null;
-    return { score, band: band(score), test, times, english, math, programs: mh.length + (english.score !== null ? 1 : 0) };
+    return { score, band: band(score), test, times, g4, english, math, programs: mh.length + (english.score !== null ? 1 : 0) };
   }
 
   // ---------- התנהלות: דילוגים והפסקות באמצע ----------
@@ -255,6 +261,26 @@
       tprog.summaryParas = a.paragraphs;
     }
     rep.programs.push(tprog);
+
+    // ---- כל נושאי כיתה ד' ----
+    const gp = profile.programs && profile.programs.g4;
+    if (G4) {
+      const g = G4.ensureProfile(gp ? gp : G4.newProfile());
+      const gprog = { id: 'g4', title: PROGRAMS.g4.title, icon: PROGRAMS.g4.icon, ability: ov.g4, strengths: [], focus: [], engagement: null, timing: null, started: G4.used(g) };
+      if (gprog.started) {
+        ov.g4.topics.filter(t => t.included).forEach(t => {
+          const tp = G4.TOPICS.find(x => x.id === t.id);
+          if (t.level >= 4 && t.acc >= 0.8) gprog.strengths.push({ title: tp.short, evidence: `רמה ${t.level} (${I.LEVEL_NAMES[t.level]}), ${pct(t.acc)}% נכונות בתשובות האחרונות` });
+          else if (t.acc < 0.6 || t.level <= 1) gprog.focus.push({ title: tp.short, evidence: `רמה ${t.level} (${I.LEVEL_NAMES[t.level]}), ${pct(t.acc)}% נכונות בתשובות האחרונות`, why: [G4.WHY[t.id]], how: G4.HOW[t.id].slice(0, 2) });
+        });
+        gprog.engagement = engagement(g.days, g.stats);
+        const tm = I.analyzeTiming({ days: g.days, stats: g.stats });
+        gprog.timing = tm.timed ? { avgMs: tm.avgMs, timed: tm.timed } : null;
+        const practiced = G4.TOPICS.filter(t => (g.stats[t.id] || {}).answered > 0);
+        gprog.summaryParas = [`${name} ${g2(gen, 'תרגל', 'תרגלה')} ${practiced.length} מתוך ${G4.TOPICS.length} הנושאים הנוספים של כיתה ד': ${practiced.map(t => t.short).join(', ') || 'עוד לא תרגל'}.`];
+      }
+      rep.programs.push(gprog);
+    }
 
     // ---- אנגלית ----
     const ep = profile.programs && profile.programs.english;

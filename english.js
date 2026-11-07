@@ -13,10 +13,10 @@
     ['a', 'ay', 'אֵיי', 'אַ (כמו ב-apple)', 'apple'], ['b', 'bee', 'בִּי', 'בּ', 'ball'], ['c', 'see', 'סִי', 'ק (כמו ב-cat)', 'cat'],
     ['d', 'dee', 'דִּי', 'ד', 'dog'], ['e', 'ee', 'אִי', 'אֶ (כמו ב-egg)', 'egg'], ['f', 'eff', 'אֶף', 'פ (f)', 'fish'],
     ['g', 'gee', "גִ'י", 'ג (כמו ב-gift)', 'gift'], ['h', 'aitch', "אֵייץ'", 'ה', 'hat'], ['i', 'eye', 'אַיי', 'אִ (כמו ב-insect)', 'insect'],
-    ['j', 'jay', "גֵ'יי", "ג' (כמו ב-juice)", 'juice'], ['k', 'kay', 'קֵיי', 'ק', 'kite'], ['l', 'el', 'אֶל', 'ל', 'lion'],
-    ['m', 'em', 'אֶם', 'מ', 'moon'], ['n', 'en', 'אֶן', 'נ', 'nose'], ['o', 'oh', 'אוֹ', 'אוֹ (כמו ב-octopus)', 'octopus'],
-    ['p', 'pee', 'פִּי', 'פּ', 'pig'], ['q', 'cue', 'קְיוּ', 'קוּ (כמו ב-queen)', 'queen'], ['r', 'ar', 'אַר', 'ר', 'rabbit'],
-    ['s', 'ess', 'אֶס', 'ס', 'sun'], ['t', 'tee', 'טִי', 'ט', 'tree'], ['u', 'you', 'יוּ', 'אַ (כמו ב-umbrella)', 'umbrella'],
+    ['j', 'jay', "גֵ'יי", "ג' (כמו ב-juice)", 'juice'], ['k', 'kay', 'קֵיי', 'ק', 'key'], ['l', 'el', 'אֶל', 'ל', 'leg'],
+    ['m', 'em', 'אֶם', 'מ', 'milk'], ['n', 'en', 'אֶן', 'נ', 'nose'], ['o', 'oh', 'אוֹ', 'אוֹ (כמו ב-octopus)', 'octopus'],
+    ['p', 'pee', 'פִּי', 'פּ', 'pen'], ['q', 'cue', 'קְיוּ', 'קוּ (כמו ב-queen)', 'queen'], ['r', 'ar', 'אַר', 'ר', 'rain'],
+    ['s', 'ess', 'אֶס', 'ס', 'sun'], ['t', 'tee', 'טִי', 'ט', 'tree'], ['u', 'you', 'יוּ', 'אַ (כמו ב-up)', 'up'],
     ['v', 'vee', 'וִי', 'ו (כמו ב-violin)', 'violin'], ['w', 'double you', 'דַּאבֶּל יוּ', 'וו (כמו ב-window)', 'window'], ['x', 'ex', 'אֶקְס', 'קס (כמו בסוף box)', 'box'],
     ['y', 'why', 'וַאי', 'י (כמו ב-yellow)', 'yellow'], ['z', 'zee', 'זִי', 'ז', 'zebra'],
   ].map(([l, name, he, snd, kw]) => ({ l, u: l.toUpperCase(), name, he, snd, kw }));
@@ -26,48 +26,100 @@
   const CONFUSE = { b: 'dpq', d: 'bpq', p: 'qbd', q: 'pdb', m: 'nw', n: 'mhu', u: 'nv', w: 'mv', h: 'nk', i: 'lj', l: 'it', j: 'ig', f: 't', t: 'f', c: 'eo', e: 'ca', a: 'eo', o: 'ac', v: 'wy', y: 'vg', g: 'qy', s: 'z', z: 's', r: 'n', k: 'h', x: 'k' };
   const SAME_SOUND = { c: 'kq', k: 'cq', q: 'ck', s: 'c', j: 'g', g: 'j' }; // לא מציגים כמסיחים אותיות עם אותו צליל
 
-  // ---------- מילים ----------
+  // ---------- מילים: לפי רשימת המילים של משרד החינוך (Lexical Pre-Band I & Band I, Elementary School, נובמבר 2020) ----------
+  // band: PB = Pre-Band I (כיתה ג' ותחילת ד'), C1 = Band I Core I (כיתה ד' עד אמצע ה'), C2 = Band I Core II (אמצע ה' עד סוף ו'),
+  // X = לא ברשימה (נשאר רק כמילת דוגמה לצליל של אות, או מגרסה קודמת). em: תמונה (null = מילה בלי תמונה ברורה, מתורגלת בטקסט)
   const THEMES = [
-    { id: 'animals', he: 'בעלי חיים', icon: '🐾' }, { id: 'colors', he: 'צבעים', icon: '🎨' }, { id: 'numbers', he: 'מספרים', icon: '🔢' },
-    { id: 'food', he: 'אוכל', icon: '🍎' }, { id: 'family', he: 'משפחה', icon: '👨‍👩‍👧' }, { id: 'home', he: 'בבית ומסביב', icon: '🏠' },
-    { id: 'school', he: 'בית ספר', icon: '🎒' }, { id: 'body', he: 'הגוף', icon: '✋' }, { id: 'nature', he: 'טבע', icon: '🌳' },
-    { id: 'actions', he: 'פעולות', icon: '🏃' }, { id: 'feelings', he: 'הרגשות', icon: '😀' }, { id: 'extra', he: 'עוד מילים', icon: '⭐' },
+    { id: 'first', he: 'מילים ראשונות', icon: '⭐' }, { id: 'people', he: 'אנשים ומשפחה', icon: '👨‍👩‍👧' }, { id: 'actions', he: 'פעולות', icon: '🏃' },
+    { id: 'talk', he: 'מילים לשיחה', icon: '💬' }, { id: 'colors', he: 'צבעים', icon: '🎨' }, { id: 'numbers', he: 'מספרים', icon: '🔢' },
+    { id: 'animals', he: 'בעלי חיים', icon: '🐾' }, { id: 'food', he: 'אוכל', icon: '🍎' }, { id: 'body', he: 'הגוף', icon: '✋' },
+    { id: 'home', he: 'בבית, בבית הספר ובחוץ', icon: '🏠' }, { id: 'nature', he: 'טבע וזמן', icon: '🌳' }, { id: 'describe', he: 'מילים שמתארות', icon: '✨' },
+    { id: 'extra', he: 'עוד מילים', icon: '➕' },
   ];
-  const W = (th, list) => list.map(([en, he, em]) => ({ id: en, en, he, em, th }));
+  const W = (th, band, list) => list.map(([en, he, em]) => ({ id: en.replace(/[^a-z]/g, ''), en, he, em: em || null, th, band }));
   const WORDS = [].concat(
-    W('animals', [['cat', 'חתול', '🐱'], ['dog', 'כלב', '🐶'], ['fish', 'דג', '🐟'], ['bird', 'ציפור', '🐦'], ['horse', 'סוס', '🐴'], ['cow', 'פרה', '🐄'], ['lion', 'אריה', '🦁'], ['monkey', 'קוף', '🐒'], ['rabbit', 'ארנב', '🐰'], ['frog', 'צפרדע', '🐸'], ['bear', 'דוב', '🐻'], ['elephant', 'פיל', '🐘'], ['duck', 'ברווז', '🦆'], ['mouse', 'עכבר', '🐭'], ['pig', 'חזיר', '🐷'], ['hen', 'תרנגולת', '🐔'], ['fox', 'שועל', '🦊'], ['snake', 'נחש', '🐍'], ['zebra', 'זברה', '🦓'], ['bee', 'דבורה', '🐝']]),
-    W('colors', [['red', 'אדום', '🟥'], ['blue', 'כחול', '🟦'], ['green', 'ירוק', '🟩'], ['yellow', 'צהוב', '🟨'], ['black', 'שחור', '⬛'], ['white', 'לבן', '⬜'], ['orange', 'כתום', '🟧'], ['purple', 'סגול', '🟪'], ['brown', 'חום', '🟫'], ['pink', 'ורוד', '🩷']]),
-    W('numbers', [['one', 'אחת', '1️⃣'], ['two', 'שתיים', '2️⃣'], ['three', 'שלוש', '3️⃣'], ['four', 'ארבע', '4️⃣'], ['five', 'חמש', '5️⃣'], ['six', 'שש', '6️⃣'], ['seven', 'שבע', '7️⃣'], ['eight', 'שמונה', '8️⃣'], ['nine', 'תשע', '9️⃣'], ['ten', 'עשר', '🔟']]),
-    W('food', [['apple', 'תפוח', '🍎'], ['banana', 'בננה', '🍌'], ['bread', 'לחם', '🍞'], ['milk', 'חלב', '🥛'], ['water', 'מים', '💧'], ['egg', 'ביצה', '🥚'], ['cake', 'עוגה', '🎂'], ['pizza', 'פיצה', '🍕'], ['lemon', 'לימון', '🍋'], ['tomato', 'עגבנייה', '🍅'], ['carrot', 'גזר', '🥕'], ['cheese', 'גבינה', '🧀'], ['juice', 'מיץ', '🧃'], ['candy', 'סוכרייה', '🍬'], ['grapes', 'ענבים', '🍇']]),
-    W('family', [['mother', 'אמא', '👩'], ['father', 'אבא', '👨'], ['sister', 'אחות', '👧'], ['brother', 'אח', '👦'], ['baby', 'תינוק', '👶'], ['grandmother', 'סבתא', '👵'], ['grandfather', 'סבא', '👴'], ['family', 'משפחה', '👨‍👩‍👧‍👦']]),
-    W('home', [['house', 'בית', '🏠'], ['door', 'דלת', '🚪'], ['window', 'חלון', '🪟'], ['bed', 'מיטה', '🛏️'], ['ball', 'כדור', '⚽'], ['car', 'מכונית', '🚗'], ['bus', 'אוטובוס', '🚌'], ['bike', 'אופניים', '🚲'], ['kite', 'עפיפון', '🪁'], ['phone', 'טלפון', '📱'], ['key', 'מפתח', '🔑'], ['hat', 'כובע', '🎩'], ['cup', 'ספל', '☕'], ['umbrella', 'מטרייה', '☂️'], ['gift', 'מתנה', '🎁']]),
-    W('school', [['book', 'ספר', '📖'], ['pen', 'עט', '🖊️'], ['pencil', 'עיפרון', '✏️'], ['bag', 'תיק', '🎒'], ['ruler', 'סרגל', '📏'], ['teacher', 'מורה', '🧑‍🏫'], ['school', 'בית ספר', '🏫'], ['chair', 'כיסא', '🪑'], ['scissors', 'מספריים', '✂️'], ['clock', 'שעון', '🕐'], ['map', 'מפה', '🗺️'], ['box', 'קופסה', '📦']]),
-    W('body', [['eye', 'עין', '👁️'], ['ear', 'אוזן', '👂'], ['nose', 'אף', '👃'], ['mouth', 'פה', '👄'], ['hand', 'יד', '✋'], ['foot', 'כף רגל', '🦶'], ['leg', 'רגל', '🦵'], ['arm', 'זרוע', '💪'], ['tooth', 'שן', '🦷']]),
-    W('nature', [['sun', 'שמש', '☀️'], ['moon', 'ירח', '🌙'], ['star', 'כוכב', '⭐'], ['tree', 'עץ', '🌳'], ['flower', 'פרח', '🌸'], ['rain', 'גשם', '🌧️'], ['sea', 'ים', '🌊'], ['snow', 'שלג', '❄️'], ['cloud', 'ענן', '☁️']]),
-    W('actions', [['run', 'לרוץ', '🏃'], ['swim', 'לשחות', '🏊'], ['sleep', 'לישון', '😴'], ['sing', 'לשיר', '🎤'], ['dance', 'לרקוד', '💃'], ['write', 'לכתוב', '✍️'], ['cook', 'לבשל', '🍳'], ['drink', 'לשתות', '🥤'], ['walk', 'ללכת', '🚶']]),
-    W('feelings', [['happy', 'שמח', '😀'], ['sad', 'עצוב', '😢'], ['angry', 'כועס', '😠'], ['hot', 'חם', '🥵'], ['cold', 'קר', '🥶'], ['tired', 'עייף', '🥱']]),
-    W('extra', [['insect', 'חרק', '🐛'], ['octopus', 'תמנון', '🐙'], ['queen', 'מלכה', '👑'], ['violin', 'כינור', '🎻'], ['ant', 'נמלה', '🐜'], ['yoyo', 'יו-יו', '🪀']]),
+    // שלב 1–3: Pre-Band I
+    W('first', 'PB', [['cat', 'חתול', '🐱'], ['dog', 'כלב', '🐶'], ['sun', 'שמש', '☀️'], ['hat', 'כובע', '🎩'], ['bag', 'תיק', '🎒'], ['pen', 'עט', '🖊️'], ['bed', 'מיטה', '🛏️'], ['bus', 'אוטובוס', '🚌'], ['box', 'קופסה', '📦'], ['egg', 'ביצה', '🥚'], ['milk', 'חלב', '🥛'], ['hand', 'יד', '✋'], ['gift', 'מתנה', '🎁'], ['pencil', 'עיפרון', '✏️'], ['desk', 'שולחן כתיבה', null], ['net', 'רשת', '🥅'], ['fan', 'מאוורר', '🪭'], ['pet', 'חיית מחמד', '🐾'], ['up', 'למעלה', '⬆️']]),
+    W('people', 'PB', [['mom', 'אמא', '👩‍👧'], ['dad', 'אבא', '👨‍👦'], ['boy', 'ילד', '👦'], ['man', 'איש', '👨'], ['kid', 'ילד/ה (kid)', '🧒'], ['friend', 'חבר/ה', '🤝']]),
+    W('actions', 'PB', [['run', 'לרוץ', '🏃'], ['swim', 'לשחות', '🏊'], ['sleep', 'לישון', '😴'], ['sit', 'לשבת', null], ['stand', 'לעמוד', '🧍'], ['talk', 'לדבר', '🗣️'], ['help', 'לעזור', null], ['go', 'ללכת / לנסוע', null], ['have', 'יש ל... (have)', null]]),
+    W('talk', 'PB', [['yes', 'כן', '✅'], ['no', 'לא', '❌'], ['hello', 'שלום', '👋'], ['goodbye', 'להתראות', null], ['thank you', 'תודה', '🙏'], ['fine', 'בסדר', null]]),
+    W('describe', 'PB', [['red', 'אדום', '🟥'], ['big', 'גדול', null], ['fast', 'מהיר', '🏎️'], ['hot', 'חם', '🥵'], ['sad', 'עצוב', '😢']]),
+    W('numbers', 'PB', [['three', 'שלוש', '3️⃣'], ['six', 'שש', '6️⃣'], ['ten', 'עשר', '🔟']]),
+    // שלב 4 והלאה: Band I Core I
+    W('colors', 'C1', [['blue', 'כחול', '🟦'], ['green', 'ירוק', '🟩'], ['yellow', 'צהוב', '🟨'], ['black', 'שחור', '⬛'], ['white', 'לבן', '⬜'], ['orange', 'כתום', '🟧'], ['brown', 'חום', '🟫'], ['pink', 'ורוד', '🩷']]),
+    W('numbers', 'C1', [['one', 'אחת', '1️⃣'], ['two', 'שתיים', '2️⃣'], ['four', 'ארבע', '4️⃣'], ['five', 'חמש', '5️⃣'], ['seven', 'שבע', '7️⃣'], ['eight', 'שמונה', '8️⃣'], ['nine', 'תשע', '9️⃣']]),
+    W('animals', 'C1', [['fish', 'דג', '🐟'], ['bird', 'ציפור', '🐦'], ['horse', 'סוס', '🐴'], ['cow', 'פרה', '🐄'], ['monkey', 'קוף', '🐒'], ['sheep', 'כבשה', '🐑']]),
+    W('food', 'C1', [['apple', 'תפוח', '🍎'], ['banana', 'בננה', '🍌'], ['bread', 'לחם', '🍞'], ['water', 'מים', '💧'], ['cake', 'עוגה', '🎂'], ['pizza', 'פיצה', '🍕'], ['juice', 'מיץ', '🧃'], ['chicken', 'עוף', '🍗'], ['rice', 'אורז', '🍚'], ['sandwich', 'כריך', '🥪'], ['chocolate', 'שוקולד', '🍫'], ['tea', 'תה', '🍵'], ['coffee', 'קפה', '☕'], ['salad', 'סלט', '🥗'], ['meat', 'בשר', '🥩'], ['fruit', 'פרי', null], ['food', 'אוכל', '🍽️']]),
+    W('people', 'C1', [['girl', 'ילדה', '👧'], ['woman', 'אישה', '👩'], ['sister', 'אחות', '👭'], ['brother', 'אח', '👬'], ['baby', 'תינוק', '👶'], ['grandmother', 'סבתא', '👵'], ['grandfather', 'סבא', '👴'], ['family', 'משפחה', '👨‍👩‍👧‍👦'], ['teacher', 'מורה', '🧑‍🏫']]),
+    W('body', 'C1', [['eye', 'עין', '👁️'], ['ear', 'אוזן', '👂'], ['nose', 'אף', '👃'], ['mouth', 'פה', '👄'], ['foot', 'כף רגל', '🦶'], ['leg', 'רגל', '🦵'], ['arm', 'זרוע', '💪'], ['finger', 'אצבע', '☝️'], ['head', 'ראש', null], ['face', 'פנים', null], ['hair', 'שיער', null]]),
+    W('home', 'C1', [['house', 'בית', '🏠'], ['door', 'דלת', '🚪'], ['window', 'חלון', '🪟'], ['ball', 'כדור', '⚽'], ['car', 'מכונית', '🚗'], ['cup', 'כוס', null], ['book', 'ספר', '📖'], ['chair', 'כיסא', '🪑'], ['clock', 'שעון', '🕐'], ['table', 'שולחן', null], ['room', 'חדר', null], ['kitchen', 'מטבח', null], ['garden', 'גינה', null], ['park', 'פארק', '🏞️'], ['game', 'משחק', '🎮'], ['shoe', 'נעל', '👟'], ['dress', 'שמלה', '👗'], ['coat', 'מעיל', '🧥'], ['computer', 'מחשב', '💻'], ['picture', 'תמונה', '🖼️'], ['zoo', 'גן חיות', null]]),
+    W('nature', 'C1', [['tree', 'עץ', '🌳'], ['flower', 'פרח', '🌸'], ['rain', 'גשם', '🌧️'], ['sea', 'ים', '🌊'], ['day', 'יום', null], ['night', 'לילה', '🌃'], ['morning', 'בוקר', '🌅']]),
+    W('describe', 'C1', [['happy', 'שמח', '😀'], ['cold', 'קר', '🥶'], ['tired', 'עייף', '🥱'], ['small', 'קטן', null], ['new', 'חדש', null], ['old', 'ישן / זקן', null], ['good', 'טוב', null], ['slow', 'איטי', '🐢'], ['nice', 'נחמד', null]]),
+    W('actions', 'C1', [['sing', 'לשיר', '🎤'], ['write', 'לכתוב', '✍️'], ['cook', 'לבשל', '🍳'], ['drink', 'לשתות', '🥤'], ['walk', 'ללכת ברגל', '🚶'], ['eat', 'לאכול', '😋'], ['play', 'לשחק', null], ['read', 'לקרוא', null], ['come', 'לבוא', null], ['see', 'לראות', null], ['look', 'להסתכל', '👀'], ['like', 'לאהוב / לחבב', '👍'], ['want', 'לרצות', null], ['listen', 'להקשיב', null], ['draw', 'לצייר', '🖍️'], ['wash', 'לרחוץ / לשטוף', '🧼'], ['fly', 'לעוף', null]]),
+    W('talk', 'C1', [['please', 'בבקשה', null], ['sorry', 'סליחה / מצטער', null], ['birthday', 'יום הולדת', '🥳'], ['name', 'שם', '📛'], ['age', 'גיל', null]]),
+    // Band I Core II
+    W('animals', 'C2', [['rabbit', 'ארנב', '🐰'], ['elephant', 'פיל', '🐘'], ['mouse', 'עכבר', '🐭'], ['pig', 'חזיר', '🐷'], ['snake', 'נחש', '🐍']]),
+    W('food', 'C2', [['tomato', 'עגבנייה', '🍅'], ['cheese', 'גבינה', '🧀'], ['candy', 'סוכרייה', '🍬']]),
+    W('home', 'C2', [['phone', 'טלפון', '📱'], ['key', 'מפתח', '🔑'], ['umbrella', 'מטרייה', '☂️'], ['ruler', 'סרגל', '📏'], ['school', 'בית ספר', '🏫']]),
+    W('body', 'C2', [['tooth', 'שן', '🦷']]),
+    W('nature', 'C2', [['star', 'כוכב', '⭐'], ['snow', 'שלג', '❄️'], ['cloud', 'ענן', '☁️']]),
+    W('actions', 'C2', [['dance', 'לרקוד', '💃']]),
+    W('extra', 'C2', [['queen', 'מלכה', '👑']]),
+    // לא ברשימה: מילות דוגמה לצליל של אות, ומילים מגרסה קודמת של האפליקציה (לא נכנסות לשלבי הלימוד)
+    W('extra', 'X', [['insect', 'חרק', '🐛'], ['octopus', 'תמנון', '🐙'], ['violin', 'כינור', '🎻'], ['zebra', 'זברה', '🦓'], ['ant', 'נמלה', '🐜'], ['yo-yo', 'יו-יו', '🪀'],
+      ['lion', 'אריה', '🦁'], ['frog', 'צפרדע', '🐸'], ['bear', 'דוב', '🐻'], ['duck', 'ברווז', '🦆'], ['hen', 'תרנגולת', '🐔'], ['fox', 'שועל', '🦊'], ['bee', 'דבורה', '🐝'],
+      ['purple', 'סגול', '🟪'], ['lemon', 'לימון', '🍋'], ['carrot', 'גזר', '🥕'], ['grapes', 'ענבים', '🍇'], ['bike', 'אופניים', '🚲'], ['kite', 'עפיפון', '🪁'], ['scissors', 'מספריים', '✂️'],
+      ['map', 'מפה', '🗺️'], ['angry', 'כועס', '😠'], ['moon', 'ירח', '🌙'], ['mother', 'אמא (mother)', null], ['father', 'אבא (father)', null]]),
   );
-  WORDS.find(w => w.id === 'yoyo').en = 'yo-yo';
   const WD = Object.fromEntries(WORDS.map(w => [w.id, w]));
+  // שלבי לימוד המילים: מ-Pre-Band I ל-Core I ואז Core II (בתוך שלב: לפי נושא)
+  const STAGES = [
+    { he: 'מילים ראשונות (Pre-Band I)', ids: ['cat', 'dog', 'sun', 'hat', 'bag', 'pen', 'bed', 'bus', 'box', 'egg', 'milk', 'hand', 'gift', 'pencil'] },
+    { he: 'אנשים ומילים לשיחה (Pre-Band I)', ids: ['mom', 'dad', 'boy', 'man', 'kid', 'friend', 'yes', 'no', 'hello', 'goodbye', 'thankyou', 'fine', 'red', 'three', 'six', 'ten'] },
+    { he: 'פעולות ותיאורים (Pre-Band I)', ids: ['run', 'swim', 'sleep', 'sit', 'stand', 'talk', 'help', 'go', 'have', 'big', 'fast', 'hot', 'sad', 'desk', 'net', 'fan', 'pet', 'up'] },
+    { he: 'צבעים ומספרים (Core I)', ids: WORDS.filter(w => w.band === 'C1' && (w.th === 'colors' || w.th === 'numbers')).map(w => w.id) },
+    { he: 'בעלי חיים ואוכל (Core I)', ids: WORDS.filter(w => w.band === 'C1' && (w.th === 'animals' || w.th === 'food')).map(w => w.id) },
+    { he: 'משפחה והגוף (Core I)', ids: WORDS.filter(w => w.band === 'C1' && (w.th === 'people' || w.th === 'body')).map(w => w.id) },
+    { he: 'בבית ובחוץ (Core I)', ids: WORDS.filter(w => w.band === 'C1' && w.th === 'home').map(w => w.id) },
+    { he: 'טבע, תיאורים ושיחה (Core I)', ids: WORDS.filter(w => w.band === 'C1' && (w.th === 'nature' || w.th === 'describe' || w.th === 'talk')).map(w => w.id) },
+    { he: 'פעולות (Core I)', ids: WORDS.filter(w => w.band === 'C1' && w.th === 'actions').map(w => w.id) },
+    { he: 'מילים מתקדמות (Core II)', ids: WORDS.filter(w => w.band === 'C2').map(w => w.id) },
+  ];
+  const BAND_HE = { PB: 'Pre-Band I', C1: 'Band I · Core I', C2: 'Band I · Core II', X: 'מחוץ לרשימה' };
   // מילים שהצליל הראשון שלהן לא "רגיל" לאות (לא מתאימות לשאלות צליל פותח)
-  const NOT_FIRST = new Set(['write', 'one', 'eight', 'ear', 'eye', 'arm', 'three', 'chair', 'cheese', 'phone', 'orange', 'school', 'scissors', 'yoyo', 'tooth', 'two']);
-  const firstSoundWords = l => WORDS.filter(w => w.en[0] === l && !NOT_FIRST.has(w.id) && /^[a-z]+$/.test(w.en));
+  const NOT_FIRST = new Set(['write', 'one', 'eight', 'ear', 'eye', 'eat', 'age', 'arm', 'old', 'orange', 'three', 'thankyou', 'chair', 'cheese', 'chicken', 'chocolate', 'phone', 'school', 'scissors', 'sheep', 'shoe', 'yoyo', 'tooth', 'two', 'knee']);
+  const firstSoundWords = l => WORDS.filter(w => w.em && w.band !== 'X' && w.en[0] === l && !NOT_FIRST.has(w.id) && /^[a-z]+$/.test(w.en));
 
-  // משפטים לקריאה: k = מילים מהמאגר שצריך להכיר
+  // משפטים לקריאה: k = מילים מהמאגר שצריך להכיר. מבנים מתוכנית 2020 לכיתה ד': to be, can, have, like, There is, This is
   const SENTENCES = [
-    ['I see a cat.', '🐱', 'אני רואה חתול.', ['cat']], ['This is my dog.', '🐶', 'זה הכלב שלי.', ['dog']], ['The sun is yellow.', '☀️', 'השמש צהובה.', ['sun', 'yellow']],
-    ['I like pizza.', '🍕', 'אני אוהב/ת פיצה.', ['pizza']], ['I have a ball.', '⚽', 'יש לי כדור.', ['ball']], ['The fish can swim.', '🐟', 'הדג יודע לשחות.', ['fish', 'swim']],
-    ['My mother is happy.', '👩😀', 'אמא שלי שמחה.', ['mother', 'happy']], ['I can run.', '🏃', 'אני יכול/ה לרוץ.', ['run']], ['The apple is red.', '🍎', 'התפוח אדום.', ['apple', 'red']],
-    ['It is a big elephant.', '🐘', 'זה פיל גדול.', ['elephant']], ['I have two books.', '📚', 'יש לי שני ספרים.', ['two', 'book']], ['This is a pen.', '🖊️', 'זה עט.', ['pen']],
-    ['The bird can fly.', '🐦', 'הציפור יכולה לעוף.', ['bird']], ['I drink milk.', '🥛', 'אני שותה חלב.', ['drink', 'milk']], ['The moon is in the sky.', '🌙', 'הירח בשמיים.', ['moon']],
+    ['I see a cat.', '🐱', 'אני רואה חתול.', ['cat']], ['This is my dog.', '🐶', 'זה הכלב שלי.', ['dog']], ['The sun is hot.', '☀️', 'השמש חמה.', ['sun', 'hot']],
+    ['I like pizza.', '🍕', 'אני אוהב/ת פיצה.', ['pizza', 'like']], ['I have a ball.', '⚽', 'יש לי כדור.', ['ball', 'have']], ['The fish can swim.', '🐟', 'הדג יודע לשחות.', ['fish', 'swim']],
+    ['My mom is happy.', '👩😀', 'אמא שלי שמחה.', ['mom', 'happy']], ['I can run.', '🏃', 'אני יכול/ה לרוץ.', ['run']], ['The apple is red.', '🍎', 'התפוח אדום.', ['apple', 'red']],
+    ['There is a hat on the bed.', '🎩🛏️', 'יש כובע על המיטה.', ['hat', 'bed']], ['I have two books.', '📚', 'יש לי שני ספרים.', ['two', 'book', 'have']], ['This is a pen.', '🖊️', 'זה עט.', ['pen']],
+    ['The bird can fly.', '🐦', 'הציפור יכולה לעוף.', ['bird', 'fly']], ['I drink milk.', '🥛', 'אני שותה חלב.', ['drink', 'milk']], ['There are six eggs.', '🥚🥚🥚🥚🥚🥚', 'יש שש ביצים.', ['six', 'egg']],
     ['I sleep in my bed.', '🛏️', 'אני ישן/ה במיטה שלי.', ['sleep', 'bed']], ['The cat is sad.', '😿', 'החתול עצוב.', ['cat', 'sad']], ['I see three stars.', '⭐⭐⭐', 'אני רואה שלושה כוכבים.', ['three', 'star']],
-    ['I have a bag.', '🎒', 'יש לי תיק.', ['bag']], ['The tree is green.', '🌳', 'העץ ירוק.', ['tree', 'green']], ['It is cold.', '🥶', 'קר.', ['cold']],
-    ['It is hot.', '🥵', 'חם.', ['hot']], ['I eat a banana.', '🍌', 'אני אוכל/ת בננה.', ['banana']], ['The frog is green.', '🐸', 'הצפרדע ירוקה.', ['frog', 'green']],
+    ['I have a bag.', '🎒', 'יש לי תיק.', ['bag', 'have']], ['The tree is green.', '🌳', 'העץ ירוק.', ['tree', 'green']], ['It is cold.', '🥶', 'קר.', ['cold']],
+    ['It is hot.', '🥵', 'חם.', ['hot']], ['I eat a banana.', '🍌', 'אני אוכל/ת בננה.', ['banana', 'eat']], ['The dog is big.', '🐕', 'הכלב גדול.', ['dog', 'big']],
     ['I see a car.', '🚗', 'אני רואה מכונית.', ['car']], ['The baby is sleeping.', '👶😴', 'התינוק ישן.', ['baby', 'sleep']], ['I have one nose.', '👃', 'יש לי אף אחד.', ['one', 'nose']],
-    ['Look at the rain.', '🌧️', 'תראו את הגשם.', ['rain']], ['The duck can swim.', '🦆', 'הברווז יודע לשחות.', ['duck', 'swim']], ['My father can cook.', '👨🍳', 'אבא שלי יודע לבשל.', ['father', 'cook']],
+    ['Look at the rain.', '🌧️', 'תראו את הגשם.', ['rain', 'look']], ['My dad can cook.', '👨🍳', 'אבא שלי יודע לבשל.', ['dad', 'cook']], ['My friend is on the bus.', '🧑🚌', 'החבר שלי באוטובוס.', ['friend', 'bus']],
   ].map(([en, em, he, k], i) => ({ id: 's' + (i + 1), en, em, he, k }));
   const SD = Object.fromEntries(SENTENCES.map(s => [s.id, s]));
+
+  // ---------- צלילים וחרוזים (Pre-Foundation: phonemic awareness, CVC) ----------
+  const RHYMES = [['cat', 'hat'], ['pen', 'ten'], ['bed', 'red'], ['sun', 'run'], ['net', 'pet'], ['fan', 'man'], ['dad', 'sad'], ['box', 'fox'], ['dog', 'frog']];
+  const CVC = ['cat', 'hat', 'bag', 'fan', 'man', 'dad', 'sad', 'pen', 'ten', 'bed', 'net', 'pet', 'red', 'six', 'kid', 'box', 'hot', 'dog', 'sun', 'run', 'bus', 'map', 'pig', 'hen', 'fox'];
+  // ---------- ביטויים לשיחה (מתוך "Conversational Phrases and Chunks" בתוכנית Pre-Foundation) ----------
+  const CHUNKS = [
+    ['Hello!', 'שלום!', 'Hello!'], ['Good morning!', 'בוקר טוב!', 'Good morning!'], ['Goodbye!', 'להתראות!', 'Goodbye!'], ['Good night!', 'לילה טוב!', 'Good night!'],
+    ["What's your name?", 'מה שמך?', 'My name is Dana.'], ['How are you?', 'מה שלומך?', "I'm fine, thank you."], ['How old are you?', 'בן/בת כמה את/ה?', 'I am ten years old.'],
+    ['Thank you!', 'תודה!', "You're welcome!"], ['Where do you live?', 'איפה את/ה גר/ה?', 'I live in Israel.'], ['What is this?', 'מה זה?', 'This is a book.'],
+    ['What color is it?', 'איזה צבע זה?', 'It is red.'], ['Do you like pizza?', 'את/ה אוהב/ת פיצה?', 'Yes, I do!'], ['What time is it?', 'מה השעה?', "It's three o'clock."],
+    ["What's the weather today?", 'מה מזג האוויר היום?', "It's hot today."], ['Happy birthday!', 'יום הולדת שמח!', 'Thank you!'], ["I'm sorry.", 'אני מצטער/ת.', 'No problem!'],
+    ['Excuse me, please.', 'סליחה (כשפונים למישהו).', null], ['Well done!', 'כל הכבוד!', null], ['Sit down, please.', 'שבו בבקשה.', null], ['Stand up, please.', 'קומו בבקשה.', null],
+    ['Be quiet, please!', 'שקט בבקשה!', null], ['Are you ready?', 'את/ה מוכן/ה?', "I'm ready!"], ['What do you see?', 'מה את/ה רואה?', 'I see a cat.'], ['Good luck!', 'בהצלחה!', 'Thank you!'],
+    ['Who is this?', 'מי זה?', 'This is my mom.'], ["Let's play a game!", 'בואו נשחק משחק!', 'OK!'], ['How many?', 'כמה?', 'Three.'], ['Take care!', 'שמור/שמרי על עצמך!', 'You too!'],
+  ].map(([en, he, reply], i) => ({ id: 'c' + (i + 1), en, he, reply }));
+  const CD = Object.fromEntries(CHUNKS.map(c => [c.id, c]));
 
   // ---------- תחומים ונושאים ----------
   const AREAS = {
@@ -81,15 +133,30 @@
     read: { title: 'קריאה', icon: '📖', target: 60, unit: 'מילים ומשפטים' },
     spell: { title: 'כתיבת מילים (איות)', icon: '📝', target: 50, unit: 'מילים' },
     speak: { title: 'דיבור והגייה', icon: '🗣️', target: 50, unit: 'אותיות ומילים' },
+    phon: { title: 'צלילים וחרוזים', icon: '🎵', target: 40, unit: 'משימות צליל' },
+    chunk: { title: 'שיחה: ביטויים ושאלות', icon: '💬', target: CHUNKS.length, unit: 'ביטויים' },
   };
+  const GRADE4_WORDS = WORDS.filter(w => w.band === 'PB' || w.band === 'C1').length; // יעד אוצר המילים: כל מילות Pre-Band I ו-Core I שבמאגר
+  AREAS.vocab.target = GRADE4_WORDS; AREAS.listen.target = WORDS.filter(w => (w.band === 'PB' || w.band === 'C1') && w.em).length;
   const AREA_IDS = Object.keys(AREAS);
+  // curr: למה זה נדרש לפי תוכנית הלימודים (Curriculum 2020, Elementary; Pre-Foundation Can-Do Descriptors)
   const TOPICS = [
-    { id: 'letters', title: 'אותיות: שמות וצלילים', icon: '🔤', areas: ['lname', 'lsound', 'lcase'], n: 10, color: 'violet', desc: 'איך קוראים לאות ואיזה צליל היא עושה' },
-    { id: 'write', title: 'כותבים אותיות', icon: '✍️', areas: ['wup', 'wlo'], n: 6, color: 'pink', desc: 'אותיות גדולות וקטנות, באצבע על המסך' },
-    { id: 'words', title: 'מילים ומשמעות', icon: '🧩', areas: ['vocab', 'listen'], n: 10, color: 'teal', desc: 'מה המילה אומרת ואיך היא נשמעת' },
-    { id: 'speak', title: 'מדברים אנגלית', icon: '🗣️', areas: ['speak'], n: 6, color: 'orange', desc: 'אומרים אותיות ומילים בקול' },
-    { id: 'read', title: 'קוראים', icon: '📖', areas: ['read'], n: 8, color: 'blue', desc: 'קוראים מילים ומשפטים קצרים' },
-    { id: 'spell', title: 'כותבים מילים', icon: '📝', areas: ['spell'], n: 5, color: 'green', desc: 'כותבים מילה אות אחרי אות' },
+    { id: 'letters', title: 'אותיות: שמות וצלילים', icon: '🔤', areas: ['lname', 'lsound', 'lcase'], n: 10, color: 'violet', desc: 'איך קוראים לאות ואיזה צליל היא עושה',
+      curr: 'Pre-A1: מזהים את כל האותיות, גדולות וקטנות ("Can recognize the letters of the alphabet in upper and lower case"), והקשר בין אות לצליל (grapheme–phoneme correspondences).' },
+    { id: 'phonics', title: 'צלילים וחרוזים', icon: '🎵', areas: ['phon'], n: 8, color: 'blue', desc: 'חרוזים, הצליל באמצע והצליל בסוף',
+      curr: 'Pre-Foundation: מודעות פונולוגית: חרוזים, צליל פותח, אמצעי וסופי, ומילים קצרות מסוג CVC (כמו cat, pen).' },
+    { id: 'write', title: 'כותבים אותיות', icon: '✍️', areas: ['wup', 'wlo'], n: 6, color: 'pink', desc: 'אותיות גדולות וקטנות, באצבע על המסך',
+      curr: 'Pre-A1: כתיבת האותיות הגדולות והקטנות בכתב דפוס, בגובה הנכון ועל קווי הכתיבה ("using correct heights and parts of the writing line").' },
+    { id: 'words', title: 'מילים ומשמעות', icon: '🧩', areas: ['vocab', 'listen'], n: 10, color: 'teal', desc: 'מה המילה אומרת ואיך היא נשמעת',
+      curr: 'אוצר מילים לפי רשימת משרד החינוך: קודם Pre-Band I (כיתה ג\' ותחילת ד\'), אחר כך Band I Core I (כיתה ד\' עד אמצע ה\').' },
+    { id: 'talk', title: 'שיחה באנגלית', icon: '💬', areas: ['chunk'], n: 8, color: 'orange', desc: 'שלום, מה שלומך, מה שמך ועוד',
+      curr: 'Social interaction: ביטויים ושאלות קצרים מתוך רשימת "Conversational Phrases and Chunks" של שלב Pre-Foundation.' },
+    { id: 'speak', title: 'מדברים אנגלית', icon: '🗣️', areas: ['speak'], n: 6, color: 'orange', desc: 'אומרים אותיות ומילים בקול',
+      curr: 'הגייה ודיבור: אומרים אותיות ומילים מהרשימה בקול ("Pronounces novel phonemes").' },
+    { id: 'read', title: 'קוראים', icon: '📖', areas: ['read'], n: 8, color: 'blue', desc: 'קוראים מילים ומשפטים קצרים',
+      curr: 'קריאה: מילים מהרשימה ומשפטים קצרים עם מבנים של כיתה ד\' (to be, can, have, There is/are).' },
+    { id: 'spell', title: 'כותבים מילים', icon: '📝', areas: ['spell'], n: 5, color: 'green', desc: 'כותבים מילה אות אחרי אות',
+      curr: 'איות: מילים קצרות (CVC) ומילים שנלמדו מהרשימה ("Spells CVC and CV words and the taught Band 1 words").' },
   ];
   const TOPIC = Object.fromEntries(TOPICS.map(t => [t.id, t]));
   const TARGET_MS = 8000;      // זמן יעד לתשובה בשאלת בחירה (פרמטר תכנון)
@@ -98,13 +165,14 @@
 
   // ---------- פרופיל ----------
   function newProfile() {
-    return { v: 1, start: null, lg: 1, wg: 1, wt: 1, intro: { L: '', W: [] }, st: {}, r: {}, tr: {}, days: {}, stats: {}, hw: {}, conf: {}, miss: {}, sp: { tries: 0, ok: 0, self: 0, na: 0 }, rlog: [] };
+    return { v: 2, start: null, lg: 1, wg: 1, wt: 1, intro: { L: '', W: [], C: [] }, st: {}, r: {}, tr: {}, days: {}, stats: {}, hw: {}, conf: {}, miss: {}, sp: { tries: 0, ok: 0, self: 0, na: 0 }, rlog: [] };
   }
   function ensureProfile(p) {
     const d = newProfile();
     p = p && typeof p === 'object' ? p : d;
     Object.keys(d).forEach(k => { if (p[k] === undefined || p[k] === null) p[k] = d[k]; });
-    p.intro.L = p.intro.L || ''; p.intro.W = Array.isArray(p.intro.W) ? p.intro.W : [];
+    p.intro.L = p.intro.L || ''; p.intro.W = Array.isArray(p.intro.W) ? p.intro.W.filter(id => WD[id]) : []; p.intro.C = Array.isArray(p.intro.C) ? p.intro.C : [];
+    if (p.wt > STAGES.length) p.wt = STAGES.length; // מעבר מגרסה עם נושאים אחרים
     AREA_IDS.forEach(a => { p.st[a] = p.st[a] || {}; });
     return p;
   }
@@ -115,13 +183,16 @@
 
   // ---------- התקדמות ונעילות ----------
   const activeLetters = n => GROUPS.slice(0, Math.max(1, Math.min(GROUPS.length, n))).join('');
-  const activeWords = p => WORDS.filter(w => THEMES.findIndex(t => t.id === w.th) < p.wt);
+  const STAGE_OF = {}; STAGES.forEach((s, i) => s.ids.forEach(id => { if (STAGE_OF[id] === undefined) STAGE_OF[id] = i; }));
+  const activeWords = p => WORDS.filter(w => STAGE_OF[w.id] !== undefined && STAGE_OF[w.id] < p.wt);
   function countMastered(p, area, items) { return items.filter(it => mastered(p, area, it)).length; }
   function masteredList(p, area) { return Object.keys(p.st[area] || {}).filter(k => p.st[area][k][0] >= MASTER); }
   function locks(p) {
     const lettersM = masteredList(p, 'lname').length, vocabM = masteredList(p, 'vocab').length, wloM = masteredList(p, 'wlo').length;
     return {
       letters: null, write: null, words: null,
+      phonics: p.intro.L.length >= 6 ? null : { need: `נפתח אחרי שלומדים 6 אותיות (עכשיו ${p.intro.L.length}).`, have: p.intro.L.length, of: 6 },
+      talk: p.intro.W.length >= 6 ? null : { need: `נפתח אחרי שלומדים 6 מילים (עכשיו ${p.intro.W.length}).`, have: p.intro.W.length, of: 6 },
       speak: p.intro.L.length + p.intro.W.length >= 3 ? null : { need: 'נפתח אחרי שלומדים כמה אותיות או מילים (בנושא "אותיות" או "מילים").', have: p.intro.L.length + p.intro.W.length, of: 3 },
       read: lettersM >= 12 && vocabM >= 10 ? null : { need: `נפתח כששולטים ב-12 שמות של אותיות (עכשיו ${lettersM}) וב-10 מילים (עכשיו ${vocabM}).`, have: Math.min(lettersM, 12) + Math.min(vocabM, 10), of: 22 },
       spell: wloM >= 8 && vocabM >= 8 ? null : { need: `נפתח כשכותבים יפה 8 אותיות קטנות (עכשיו ${wloM}) ומכירים 8 מילים (עכשיו ${vocabM}).`, have: Math.min(wloM, 8) + Math.min(vocabM, 8), of: 16 },
@@ -142,9 +213,9 @@
       if (ok >= items.length * 0.75) { p.wg++; ev.push({ type: 'write', text: `אפשר לכתוב אותיות חדשות: ${GROUPS[p.wg - 1].split('').join(' ')}` }); }
     }
     const aw = activeWords(p);
-    if (p.wt < THEMES.length && aw.every(w => p.intro.W.includes(w.id))) {
+    if (p.wt < STAGES.length && aw.every(w => p.intro.W.includes(w.id))) {
       const ok = aw.filter(w => box(p, 'vocab', w.id) >= MASTER).length;
-      if (ok >= aw.length * 0.7) { p.wt++; const th = THEMES[p.wt - 1]; ev.push({ type: 'words', text: `נפתח נושא מילים חדש: ${th.icon} ${th.he}` }); }
+      if (ok >= aw.length * 0.7) { p.wt++; ev.push({ type: 'words', text: `נפתח שלב מילים חדש: ${STAGES[p.wt - 1].he}` }); }
     }
     return ev;
   }
@@ -173,12 +244,13 @@
     if (out.length < n) shuffle(LETTERS.map(x => x.l).filter(x => !ban.has(x) && !out.includes(x)), rng).slice(0, n - out.length).forEach(x => out.push(x));
     return out;
   }
-  function wordDistractors(w, n, rng, p) {
+  function wordDistractors(w, n, rng, p, needPic) {
     const known = new Set(p.intro.W);
-    const sameTh = shuffle(WORDS.filter(x => x.id !== w.id && x.th === w.th && x.em !== w.em), rng);
-    const knownOther = shuffle(WORDS.filter(x => x.id !== w.id && known.has(x.id) && x.th !== w.th), rng);
+    const okw = x => x.id !== w.id && x.he !== w.he && x.en !== w.en && (!needPic || (x.em && x.em !== w.em)) && x.band !== 'X';
+    const sameTh = shuffle(WORDS.filter(x => okw(x) && x.th === w.th), rng);
+    const knownOther = shuffle(WORDS.filter(x => okw(x) && known.has(x.id) && x.th !== w.th), rng);
     const out = [];
-    for (const x of sameTh.slice(0, 2).concat(knownOther, sameTh.slice(2), shuffle(WORDS, rng))) { if (out.length >= n) break; if (x.id !== w.id && x.he !== w.he && !out.find(o => o.id === x.id || o.em === x.em || o.he === x.he)) out.push(x); }
+    for (const x of sameTh.slice(0, 2).concat(knownOther, sameTh.slice(2), shuffle(WORDS.filter(okw), rng))) { if (out.length >= n) break; if (!out.find(o => o.id === x.id || (needPic && o.em === x.em) || o.he === x.he)) out.push(x); }
     return out;
   }
 
@@ -209,20 +281,58 @@
       if (!words.length) return mkLetterTask('L_first', l, rng, p);
       const w = pick(words, rng);
       const ban = new Set([l].concat((SAME_SOUND[l] || '').split('')));
-      const others = shuffle(WORDS.filter(x => !ban.has(x.en[0]) && /^[a-z]/.test(x.en) && x.em !== w.em), rng).slice(0, 2);
+      const others = shuffle(WORDS.filter(x => x.em && x.band !== 'X' && !ban.has(x.en[0]) && /^[a-z]/.test(x.en) && x.em !== w.em), rng).slice(0, 2);
       const ch = shuffle([w].concat(others), rng);
       return { kind, area: 'lsound', item: l, show: L.u + l, prompt: `איזו מילה מתחילה בצליל של ${l}?`, choices: ch.map(x => ({ v: x.id, label: x.em, say: x.en, pic: true })), answer: w.id };
     }
     return null;
   }
+  const PIC_KINDS = ['V_pic2word', 'H_word2pic', 'R_word2pic'];
   function mkWordTask(kind, id, rng, p) {
-    const w = WD[id], ds = wordDistractors(w, 3, rng, p), all = shuffle([w].concat(ds), rng);
+    const w = WD[id];
+    if (PIC_KINDS.includes(kind) && !w.em) kind = kind === 'V_pic2word' ? 'V_he2word' : kind === 'H_word2pic' ? 'H_word2he' : 'R_word2he';
+    const pic = PIC_KINDS.includes(kind), ds = wordDistractors(w, 3, rng, p, pic), all = shuffle([w].concat(ds), rng);
     if (kind === 'V_pic2word') return { kind, area: 'vocab', item: id, em: w.em, prompt: 'מה המילה באנגלית?', choices: all.map(x => ({ v: x.id, label: x.en, en: true })), answer: id };
     if (kind === 'V_word2he') return { kind, area: 'vocab', item: id, show: w.en, say: w.en, prompt: 'מה פירוש המילה?', choices: all.map(x => ({ v: x.id, label: x.he })), answer: id };
     if (kind === 'V_he2word') return { kind, area: 'vocab', item: id, showHe: w.he, prompt: 'איך אומרים באנגלית?', choices: all.map(x => ({ v: x.id, label: x.en, en: true })), answer: id };
     if (kind === 'H_word2pic') return { kind, area: 'listen', item: id, say: w.en, prompt: 'הקשיבו: איזו תמונה מתאימה למילה?', choices: all.map(x => ({ v: x.id, label: x.em, pic: true })), answer: id };
+    if (kind === 'H_word2he') return { kind, area: 'listen', item: id, say: w.en, prompt: 'הקשיבו: מה פירוש המילה ששמעתם?', choices: all.map(x => ({ v: x.id, label: x.he })), answer: id };
     if (kind === 'R_word2pic') return { kind, area: 'read', item: 'W:' + id, show: w.en, prompt: 'קראו את המילה ובחרו תמונה', choices: all.map(x => ({ v: x.id, label: x.em, pic: true })), answer: id, noAudio: true };
+    if (kind === 'R_word2he') return { kind, area: 'read', item: 'W:' + id, show: w.en, prompt: 'קראו את המילה ובחרו מה היא אומרת', choices: all.map(x => ({ v: x.id, label: x.he })), answer: id, noAudio: true };
     return null;
+  }
+  // ---------- צלילים וחרוזים ----------
+  const ending = en => en.slice(-2);
+  const VOWELS = ['a', 'e', 'i', 'o', 'u'];
+  function mkPhonTask(kind, word, rng) {
+    const w = WD[word];
+    if (kind === 'F_rhyme') {
+      const pair = RHYMES.find(r => r.includes(word)), partner = WD[pair[0] === word ? pair[1] : pair[0]];
+      const others = shuffle(CVC.map(id => WD[id]).filter(x => x && x.em && ending(x.en) !== ending(w.en) && x.em !== w.em && x.em !== partner.em), rng).slice(0, 2);
+      const ch = shuffle([partner].concat(others), rng);
+      return { kind, area: 'phon', item: 'R:' + word, word, em: w.em, say: w.en, prompt: `איזו מילה מתחרזת עם ${w.en}?`, choices: ch.map(x => ({ v: x.id, label: x.em, say: x.en, pic: true })), answer: partner.id };
+    }
+    if (kind === 'F_mid') {
+      const v = w.en[1], ch = shuffle([v].concat(shuffle(VOWELS.filter(x => x !== v), rng).slice(0, 2)), rng);
+      return { kind, area: 'phon', item: 'M:' + word, word, em: w.em, say: w.en, pattern: `${w.en[0]} _ ${w.en[2]}`, prompt: 'איזה צליל שומעים באמצע המילה?', choices: ch.map(x => ({ v: x, label: x, en: true })), answer: v };
+    }
+    if (kind === 'F_end') {
+      const l = w.en[w.en.length - 1], ch = shuffle([l].concat(letterDistractors(l, 3, rng)), rng);
+      return { kind, area: 'phon', item: 'E:' + word, word, em: w.em, say: w.en, prompt: 'באיזו אות נגמרת המילה?', choices: ch.map(x => ({ v: x, label: x, en: true })), answer: l };
+    }
+    return null;
+  }
+  // ---------- שיחה ----------
+  function mkChunkTask(kind, cid, rng) {
+    const c = CD[cid];
+    if (kind === 'K_reply' && c.reply) {
+      const others = [];
+      shuffle(CHUNKS.filter(x => x.id !== cid && x.reply && x.reply !== c.reply), rng).forEach(x => { if (others.length < 2 && !others.some(o => o.reply === x.reply)) others.push(x); });
+      const all = shuffle([c].concat(others), rng);
+      return { kind, area: 'chunk', item: 'K:' + cid, show: c.en, say: c.en, prompt: 'מה עונים?', choices: all.map(x => ({ v: x.id, label: x.reply, en: true })), answer: cid };
+    }
+    const others = shuffle(CHUNKS.filter(x => x.id !== cid && x.he !== c.he), rng).slice(0, 2), all = shuffle([c].concat(others), rng);
+    return { kind: 'K_mean', area: 'chunk', item: 'K:' + cid, show: c.en, say: c.en, prompt: 'מה פירוש המשפט?', choices: all.map(x => ({ v: x.id, label: x.he })), answer: cid };
   }
   function mkSentenceTask(sid, rng) {
     const s = SD[sid], others = shuffle(SENTENCES.filter(x => x.id !== sid && x.em !== s.em), rng).slice(0, 2), all = shuffle([s].concat(others), rng);
@@ -251,6 +361,24 @@
         const w = WD[task.answer], g = WD[given];
         return [`${w.em} ${w.en} מתחילה ב-${task.item}.`, g ? `${g.em} ${g.en} מתחילה ב-${g.en[0]}.` : ''].filter(Boolean);
       }
+    }
+    if (k === 'F_rhyme') {
+      const w = WD[task.word], a = WD[task.answer], g = WD[given];
+      return [`${w.en} ו-${a.en} מתחרזות: שתיהן נגמרות בצליל "${ending(w.en)}".`, g ? `${g.en} ${g.em} נגמרת ב-"${ending(g.en)}", ולכן לא מתחרזת.` : '', 'טיפ: אומרים את שתי המילים בקול ומקשיבים לסוף שלהן.'].filter(Boolean);
+    }
+    if (k === 'F_mid') {
+      const w = WD[task.word], L = LET[task.answer];
+      return [`במילה ${w.en} ${w.em} שומעים באמצע ${L.snd.split(' ')[0]}, וזו האות ${task.answer}.`, LET[given] ? `האות ${given} עושה את הצליל ${LET[given].snd}.` : ''].filter(Boolean);
+    }
+    if (k === 'F_end') {
+      const w = WD[task.word], L = LET[task.answer];
+      return [`המילה ${w.en} ${w.em} נגמרת בצליל ${L.snd.split(' ')[0]}, וזו האות ${task.answer}.`].filter(Boolean);
+    }
+    if (k === 'K_mean' || k === 'K_reply') {
+      const c = CD[task.answer], g = CD[given];
+      return k === 'K_reply'
+        ? [`על "${c.en}" (${c.he}) עונים: "${c.reply}".`, g ? `"${g.reply}" היא תשובה לשאלה "${g.en}".` : '']
+        : [`"${c.en}" פירושו: ${c.he}`, g ? `"${g.en}" פירושו: ${g.he}` : ''];
     }
     if (k === 'R_sent') {
       const s = SD[task.answer], g = SD[given];
@@ -323,6 +451,40 @@
       }
       return { topic: topicId, tasks, intro, pace: pc };
     }
+    if (topicId === 'phonics') {
+      const known = new Set(p.intro.L.split(''));
+      const all = CVC.filter(id => WD[id] && WD[id].em);
+      const kn = all.filter(id => [...WD[id].en].every(c => known.has(c)));
+      const pool = kn.length >= 5 ? kn : all;
+      if (!Object.keys(p.st.phon || {}).length) tasks.push({ kind: 'introP', item: 'phon', area: null });
+      let guard = 0;
+      while (tasks.filter(t => t.area).length < n && guard++ < 200) {
+        const kind = pick(['F_rhyme', 'F_mid', 'F_mid', 'F_end'], rng);
+        let word;
+        if (kind === 'F_rhyme') { const rp = RHYMES.filter(r => r.every(id => WD[id] && WD[id].em)); word = pick(pick(rp, rng), rng); }
+        else word = pick(pool, rng);
+        const key = kind[2] + ':' + word;
+        const itemKey = (kind === 'F_rhyme' ? 'R:' : kind === 'F_mid' ? 'M:' : 'E:') + word;
+        if (used['phon:' + itemKey]) continue;
+        if (rng() > itemWeight(p, 'phon', itemKey) / 6 + 0.15) continue; // מעדיפים מה שעוד לא נשלט
+        push(mkPhonTask(kind, word, rng));
+      }
+      return { topic: topicId, tasks, intro, pace: pc };
+    }
+    if (topicId === 'talk') {
+      const fresh = CHUNKS.filter(c => !p.intro.C.includes(c.id));
+      const k = Math.min(fresh.length, p.intro.C.length === 0 ? 3 : pc.mode === 'fast' ? 4 : pc.mode === 'reinforce' ? (p.intro.C.length < 4 ? 1 : 0) : 3);
+      fresh.slice(0, k).forEach(c => { intro.push(c.id); tasks.push({ kind: 'introC', item: c.id, area: null }); push(Object.assign(mkChunkTask('K_mean', c.id, rng), { afterIntro: true })); });
+      const known = p.intro.C.concat(intro);
+      let guard = 0;
+      while (tasks.filter(t => t.area).length < n && guard++ < 200) {
+        const id = weighted(known, x => itemWeight(p, 'chunk', 'K:' + x) / (1 + 2 * (used['chunk:K:' + x] || 0)), rng);
+        const last = tasks[tasks.length - 1];
+        if (last && last.item === 'K:' + id && known.length > 1) continue;
+        push(mkChunkTask(CD[id].reply && rng() < 0.55 ? 'K_reply' : 'K_mean', id, rng));
+      }
+      return { topic: topicId, tasks, intro, pace: pc };
+    }
     if (topicId === 'speak') {
       const items = [...p.intro.L].map(l => 'L:' + l).concat(p.intro.W.map(w => 'W:' + w));
       let guard = 0;
@@ -367,6 +529,7 @@
     if (!p.start) p.start = day;
     if (kind === 'introL' && !p.intro.L.includes(item)) p.intro.L += item;
     if (kind === 'introW' && !p.intro.W.includes(item)) p.intro.W.push(item);
+    if (kind === 'introC' && !p.intro.C.includes(item)) p.intro.C.push(item);
   }
   // o: { ms, timed, given, trace, hw (תוצאת כתב יד), self }
   function record(p, task, ok, day, o) {
@@ -378,7 +541,7 @@
     const before = r[0];
     if (ok) {
       const firstEver = r[1] === 0 && r[2] === 0;
-      let nb = firstEver && !task.afterIntro && /^(L_|V_|H_|R_)/.test(task.kind) ? 2 : r[0] + 1;
+      let nb = firstEver && !task.afterIntro && /^(L_|V_|H_|R_|F_|K_)/.test(task.kind) ? 2 : r[0] + 1;
       if (o.trace) nb = Math.min(nb, 2); // העתקה על גבי האות לא מספיקה לשליטה
       r[0] = Math.min(5, Math.max(r[0], nb)); r[1]++;
     } else { r[0] = Math.max(0, r[0] - 2); r[2]++; }
@@ -479,6 +642,8 @@
     read: 'קריאה דורשת לחבר את הצלילים של האותיות למילה, ובאנגלית יש מילים שלא נקראות כפי שהן נכתבות.',
     spell: 'באנגלית אותו צליל נכתב לפעמים בדרכים שונות, ולכן צריך לזכור את צורת המילה ולא רק לשמוע אותה.',
     speak: 'יש צלילים באנגלית שאין בעברית, ולפעמים יש גם מבוכה לדבר בקול בשפה חדשה.',
+    phon: 'בעברית התנועות כמעט לא נכתבות, ולכן קשה בהתחלה לשמוע את ההבדל בין a, e, i, o, u באמצע מילה, ולזהות חרוזים.',
+    chunk: 'ביטויים לשיחה נלמדים כיחידה שלמה ("How are you?") ולא מילה במילה, ולכן צריך לשמוע ולומר אותם הרבה פעמים במצבים אמיתיים.',
   };
   const HOW = {
     lname: ['לשיר יחד את שיר ה-ABC ולהצביע על כל אות.', 'משחק "מצא את האות" על שלטים, קופסאות וספרים.', 'חמש דקות ביום עם כרטיסיות של אותיות.'],
@@ -491,6 +656,8 @@
     read: ['לקרוא יחד מילים קצרות (cat, dog, sun) ולהעביר אצבע מתחת לכל אות.', 'מילים קצרות ושכיחות כמו the, is, I לזכור כמו תמונה.'],
     spell: ['שיטת "מסתכלים, אומרים, מכסים, כותבים, בודקים": כותבים מילה, מכסים, כותבים שוב מהזיכרון ובודקים.', 'להתחיל ממילים קצרות של שלוש אותיות.'],
     speak: ['לחזור בקול אחרי ההקלטה של האפליקציה, לאט ובבירור.', 'לשאול שאלות קצרות באנגלית בבית ("What color is it?") ולענות במילה אחת.'],
+    phon: ['משחק חרוזים בעל פה: cat, hat, bat… מי ממשיך?', 'לומר מילה קצרה לאט ולהפריד לצלילים: c-a-t, ולשאול "מה שמעת באמצע?".'],
+    chunk: ['לפתוח כל בוקר בביטוי אחד באנגלית ("Good morning! How are you?") ולענות יחד.', 'משחק תפקידים קצר: חנות, היכרות, יום הולדת.'],
   };
   function report(kid, p, o) {
     const name = kid.name, gen = kid.gender === 'f' ? 'f' : 'm', g = (m, f) => (gen === 'f' ? f : m);
@@ -539,12 +706,25 @@
     const L = masteredList(p, 'lname').length, V = masteredList(p, 'vocab').length;
     prog.summaryParas = [
       `${name} ${g('למד', 'למדה')} עד עכשיו ${p.intro.L.length} אותיות ו-${p.intro.W.length} מילים, ${g('ושולט', 'ושולטת')} ב-${L} שמות של אותיות וב-${V} מילים.`,
-      `אותיות פתוחות לתרגול: ${activeLetters(p.lg).split('').join(' ')}. ${p.wt < THEMES.length ? `נושא המילים הבא: ${THEMES[p.wt] ? THEMES[p.wt].he : ''}.` : ''}`.trim(),
+      `אותיות פתוחות לתרגול: ${activeLetters(p.lg).split('').join(' ')}. שלב המילים הנוכחי: ${STAGES[Math.min(p.wt, STAGES.length) - 1].he}.`,
     ];
+    prog.curriculum = curriculum(p);
     return prog;
   }
+  // התאמה לתוכנית משרד החינוך: כמה מילים מכל רשימה נלמדו ונשלטו (מתוך המילים שבמאגר האפליקציה)
+  function curriculum(p) {
+    ensureProfile(p);
+    const out = {};
+    ['PB', 'C1', 'C2'].forEach(b => {
+      const ws = WORDS.filter(w => w.band === b);
+      out[b] = { label: BAND_HE[b], inBank: ws.length, learned: ws.filter(w => p.intro.W.includes(w.id)).length, mastered: ws.filter(w => box(p, 'vocab', w.id) >= MASTER).length };
+    });
+    out.letters = { learned: p.intro.L.length, nameMastered: masteredList(p, 'lname').length, upper: masteredList(p, 'wup').length, lower: masteredList(p, 'wlo').length };
+    out.chunks = { learned: p.intro.C.length, of: CHUNKS.length, mastered: masteredList(p, 'chunk').length };
+    return out;
+  }
 
-  return { LETTERS, LET, GROUPS, WORDS, WD, THEMES, SENTENCES, SD, AREAS, AREA_IDS, TOPICS, TOPIC, TARGET_MS, MASTER, PACE_TEXT,
+  return { STAGES, BAND_HE, CHUNKS, CD, RHYMES, CVC, curriculum, mkPhonTask, mkChunkTask, LETTERS, LET, GROUPS, WORDS, WD, THEMES, SENTENCES, SD, AREAS, AREA_IDS, TOPICS, TOPIC, TARGET_MS, MASTER, PACE_TEXT,
     newProfile, ensureProfile, box, mastered, masteredList, activeLetters, activeWords, locks, advance, pace, planSession, explain, pairTip,
     markIntro, record, recordSkip, recordSelf, recordPartial, completeSession, matchSpeech, areaInfo, abilityScore, report, used, practicedDay, WHY, HOW, mkLetterTask, mkWordTask, letterDistractors };
 });

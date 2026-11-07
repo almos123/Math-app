@@ -10,7 +10,7 @@ const g = (m, f) => (C.kid() && C.kid().gender === 'f' ? f : m);
 const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CHEERS = ['Great job!', 'Super!', 'Well done!', 'Yes!', 'Awesome!', 'Perfect!'];
 const CHEERS_HE = ['מצוין!', 'כל הכבוד!', 'נכון מאוד!', 'יופי!', 'בדיוק!'];
-const KIND_ICON = { L_hear: '👂', L_name: '🔤', L_case: '🅰️', L_first: '🔊', L_pic: '🖼️', V_pic2word: '🧩', V_word2he: '🧩', V_he2word: '🧩', H_word2pic: '👂', R_word2pic: '📖', R_sent: '📖', W_letter: '✍️', S_letter: '🗣️', S_word: '🗣️', P_hand: '📝', P_type: '⌨️' };
+const KIND_ICON = { L_hear: '👂', L_name: '🔤', L_case: '🅰️', L_first: '🔊', L_pic: '🖼️', V_pic2word: '🧩', V_word2he: '🧩', V_he2word: '🧩', H_word2pic: '👂', H_word2he: '👂', R_word2pic: '📖', R_word2he: '📖', F_rhyme: '🎵', F_mid: '🎵', F_end: '🎵', K_mean: '💬', K_reply: '💬', R_sent: '📖', W_letter: '✍️', S_letter: '🗣️', S_word: '🗣️', P_hand: '📝', P_type: '⌨️' };
 const enTxt = s => `<span class="en" dir="ltr">${esc(s)}</span>`;
 
 export function init(ctx) {
@@ -27,6 +27,8 @@ export function renderMenu() {
     if (t.id === 'letters') return `${p.intro.L.length} מתוך 26 אותיות · ${EN.masteredList(p, 'lname').length} ${g('יודע', 'יודעת')} היטב`;
     if (t.id === 'write') return `${EN.masteredList(p, 'wup').length + EN.masteredList(p, 'wlo').length} אותיות כתובות יפה (מתוך 52)`;
     if (t.id === 'words') return `${p.intro.W.length} מילים · ${EN.masteredList(p, 'vocab').length} ${g('יודע', 'יודעת')} היטב`;
+    if (t.id === 'phonics') return `${EN.masteredList(p, 'phon').length} משימות צליל ${g('שולט', 'שולטת')} בהן`;
+    if (t.id === 'talk') return `${p.intro.C.length} מתוך ${EN.CHUNKS.length} ביטויים · ${EN.masteredList(p, 'chunk').length} ${g('יודע', 'יודעת')} היטב`;
     if (t.id === 'speak') return `${EN.masteredList(p, 'speak').length} אותיות ומילים נאמרו נכון`;
     if (t.id === 'read') return `${EN.masteredList(p, 'read').length} מילים ומשפטים נקראו`;
     return `${EN.masteredList(p, 'spell').length} מילים נכתבו נכון`;
@@ -84,6 +86,8 @@ function next() {
   run.task = t; run.locked = false; run.attempts = 0; run.t0 = performance.now(); run.hiddenAt = 0;
   if (t.kind === 'introL') return viewIntroL(t);
   if (t.kind === 'introW') return viewIntroW(t);
+  if (t.kind === 'introC') return viewIntroC(t);
+  if (t.kind === 'introP') return viewIntroP(t);
   if (t.kind === 'W_letter') return viewWrite(t);
   if (t.kind === 'S_letter' || t.kind === 'S_word') return viewSpeak(t);
   if (t.kind === 'P_hand') return viewSpellHand(t);
@@ -127,7 +131,7 @@ function viewIntroW(t) {
   C.app.innerHTML = `<main class="screen en-card c-teal">
     ${head()}
     <p class="new-tag">✨ מילה חדשה ✨</p>
-    <div class="word-pic" aria-hidden="true">${w.em}</div>
+    <div class="word-pic" aria-hidden="true">${w.em || '💬'}</div>
     <div class="word-big">${enTxt(w.en)} ${spk(w.en, 'השמעה')}${canSpeak() ? `<button class="spk slow" data-eact="say" data-slow="1" data-t="${esc(w.en)}" aria-label="השמעה לאט">🐢</button>` : ''}</div>
     <p class="word-he">${esc(w.he)}</p>
     <p class="ev center">האותיות: <span class="en" dir="ltr">${esc(spellOut(w.en))}</span></p>
@@ -136,6 +140,36 @@ function viewIntroW(t) {
   </main>`;
   EN.markIntro(prof(), 'introW', t.item, C.dayKey()); C.save(C.dayKey());
   say(w.en);
+}
+function viewIntroC(t) {
+  const c = EN.CD[t.item];
+  C.app.innerHTML = `<main class="screen en-card c-orange">
+    ${head()}
+    <p class="new-tag">✨ ביטוי חדש לשיחה ✨</p>
+    <div class="word-pic" aria-hidden="true">💬</div>
+    <div class="sent-q">${enTxt(c.en)} ${spk(c.en, 'השמעה')}${canSpeak() ? `<button class="spk slow" data-eact="say" data-slow="1" data-t="${esc(c.en)}" aria-label="השמעה לאט">🐢</button>` : ''}</div>
+    <p class="word-he">${esc(c.he)}</p>
+    ${c.reply ? `<div class="fact"><span class="fl">עונים</span><b>${enTxt(c.reply)}</b>${spk(c.reply, 'השמעת התשובה')}</div>` : ''}
+    <div class="spacer"></div>
+    <div class="dock"><button class="btn primary big" data-eact="cont">הבנתי! ממשיכים</button></div>
+  </main>`;
+  EN.markIntro(prof(), 'introC', t.item, C.dayKey()); C.save(C.dayKey());
+  say(c.en).then(() => { if (c.reply) say(c.reply); });
+}
+function viewIntroP() {
+  C.app.innerHTML = `<main class="screen en-card c-blue">
+    ${head()}
+    <p class="new-tag">🎵 צלילים וחרוזים 🎵</p>
+    <div class="word-pic" aria-hidden="true">🐱🎩</div>
+    <div class="sent-q">${enTxt('cat – hat')} ${spk('cat, hat', 'השמעה')}</div>
+    <div class="rules"><ul>
+      <li><b>חרוז</b>: מילים שנגמרות באותו צליל, כמו cat ו-hat.</li>
+      <li><b>הצליל באמצע</b>: ב-c_t שומעים a. מקשיבים טוב ובוחרים את האות.</li>
+      <li><b>הצליל בסוף</b>: באיזו אות נגמרת המילה? אומרים אותה לאט ומקשיבים לסוף.</li></ul></div>
+    <div class="spacer"></div>
+    <div class="dock"><button class="btn primary big" data-eact="cont">יאללה!</button></div>
+  </main>`;
+  say('cat, hat');
 }
 const spellOut = en => en.split('').filter(c => /[a-z]/.test(c)).join(' - ');
 
@@ -152,6 +186,11 @@ function viewChoice(t) {
   else if (t.kind === 'H_word2pic') q = `<div class="listen-big">${spk(t.say, 'השמעה שוב', 'xl')}<p class="ev">לחצו כדי לשמוע שוב</p></div>`;
   else if (t.kind === 'R_word2pic') q = `<div class="word-q">${enTxt(t.show)}</div>`;
   else if (t.kind === 'R_sent') q = `<div class="sent-q">${enTxt(t.show)}</div>`;
+  else if (t.kind === 'R_word2he') q = `<div class="word-q">${enTxt(t.show)}</div>`;
+  else if (t.kind === 'H_word2he') q = `<div class="listen-big">${spk(t.say, 'השמעה שוב', 'xl')}<p class="ev">לחצו כדי לשמוע שוב</p></div>`;
+  else if (t.kind === 'F_rhyme' || t.kind === 'F_end') q = `<div class="pic-q"><span class="pq-em">${t.em}</span>${spk(t.say, 'השמעת המילה', 'lg')}</div>`;
+  else if (t.kind === 'F_mid') q = `<div class="pic-q"><span class="pq-em">${t.em}</span>${spk(t.say, 'השמעת המילה', 'lg')}</div><div class="pattern en" dir="ltr">${esc(t.pattern)}</div>`;
+  else if (t.kind === 'K_mean' || t.kind === 'K_reply') q = `<div class="sent-q">${enTxt(t.show)} ${spk(t.say, 'השמעה')}</div>`;
   const pics = t.choices.some(c => c.pic);
   C.app.innerHTML = `<main class="screen en-q c-${EN.TOPIC[run.topic].color}">
     ${head()}
@@ -181,6 +220,10 @@ function choose(i) {
 function sayAnswer(t) {
   if (t.kind.startsWith('L_')) { if (t.kind === 'L_first') return EN.WD[t.word].en; if (t.kind === 'L_pic') return EN.WD[t.answer].en; return EN.LET[t.item].name; }
   if (t.kind === 'R_sent') return EN.SD[t.answer].en;
+  if (t.kind === 'F_rhyme') return `${EN.WD[t.word].en}, ${EN.WD[t.answer].en}`;
+  if (t.kind === 'F_mid' || t.kind === 'F_end') return EN.WD[t.word].en;
+  if (t.kind === 'K_mean') return EN.CD[t.answer].en;
+  if (t.kind === 'K_reply') return `${EN.CD[t.answer].en} ${EN.CD[t.answer].reply}`;
   return EN.WD[t.answer] ? EN.WD[t.answer].en : '';
 }
 function correctAudio(t) { const s = sayAnswer(t); return s ? [{ t: s, label: 'איך אומרים' }] : []; }
@@ -189,7 +232,11 @@ function reinforceLine(t) {
   if (t.kind === 'L_case') { const L = EN.LET[t.item]; return [`${L.u} גדולה, ${L.l} קטנה`]; }
   if (t.kind === 'L_first' || t.kind === 'L_pic') { const w = EN.WD[t.kind === 'L_first' ? t.word : t.answer]; return [`${w.em} ${w.en} = ${w.he}`]; }
   if (t.kind === 'R_sent') { const s = EN.SD[t.answer]; return [`${s.en} = ${s.he}`]; }
-  const w = EN.WD[t.answer]; return w ? [`${w.en} = ${w.he} ${w.em}`] : [];
+  if (t.kind === 'F_rhyme') return [`${EN.WD[t.word].en} – ${EN.WD[t.answer].en}: חרוז!`];
+  if (t.kind === 'F_mid' || t.kind === 'F_end') { const w = EN.WD[t.word]; return [`${w.en} ${w.em} = ${w.he}`]; }
+  if (t.kind === 'K_mean') { const c = EN.CD[t.answer]; return [`${c.en} = ${c.he}`]; }
+  if (t.kind === 'K_reply') { const c = EN.CD[t.answer]; return [`${c.en} → ${c.reply}`]; }
+  const w = EN.WD[t.answer]; return w ? [`${w.en} = ${w.he} ${w.em || ''}`] : [];
 }
 
 // רישום תשובה + חזרה על פריט שנכשל בסוף השיעור
@@ -211,6 +258,8 @@ function regen(t) {
   if (t.kind === 'W_letter') return { kind: 'W_letter', area: t.area, item: t.item };
   if (t.kind.startsWith('L_')) return EN.mkLetterTask(t.kind === 'L_pic' ? 'L_first' : t.kind === 'L_name' ? 'L_hear' : t.kind, t.item, rng, p);
   if (t.kind === 'R_sent') return null;
+  if (t.kind.startsWith('F_')) return EN.mkPhonTask(t.kind, t.word, rng);
+  if (t.kind.startsWith('K_')) return EN.mkChunkTask(t.kind, t.answer, rng);
   const id = String(t.item).replace(/^W:/, '');
   return EN.mkWordTask(t.kind === 'V_he2word' ? 'V_pic2word' : t.kind, id, rng, p);
 }
@@ -375,7 +424,7 @@ function viewSpeak(t) {
   C.app.innerHTML = `<main class="screen en-speak c-orange">
     ${head()}
     <section class="qcard"><div class="tp"><span aria-hidden="true">🗣️</span> ${isL ? 'אמרו בקול את שם האות' : 'אמרו בקול את המילה באנגלית'}${skipBtn(t)}</div>
-      ${isL ? `<div class="big-letter sm" dir="ltr"><b class="up">${L.u}</b><b class="lo">${L.l}</b></div>` : `<div class="word-pic sm" aria-hidden="true">${w.em}</div><div class="word-big">${enTxt(w.en)}</div><p class="word-he">${esc(w.he)}</p>`}
+      ${isL ? `<div class="big-letter sm" dir="ltr"><b class="up">${L.u}</b><b class="lo">${L.l}</b></div>` : `${w.em ? `<div class="word-pic sm" aria-hidden="true">${w.em}</div>` : ''}<div class="word-big">${enTxt(w.en)}</div><p class="word-he">${esc(w.he)}</p>`}
       ${spk(t.say, 'איך אומרים', 'lg')}<span class="ev"> הקשיבו קודם</span>
     </section>
     <div class="mic-zone">
@@ -443,7 +492,7 @@ function viewSpellHand(t) {
   C.app.innerHTML = `<main class="screen en-spell c-green">
     ${head()}
     <section class="qcard"><div class="tp"><span aria-hidden="true">📝</span> כתבו את המילה באנגלית, אות אחרי אות${skipBtn(t)}</div>
-      <div class="sp-q"><span class="pq-em">${w.em}</span><span class="word-he">${esc(w.he)}</span>${spk(w.en, 'השמעת המילה', 'lg')}</div>
+      <div class="sp-q">${w.em ? `<span class="pq-em">${w.em}</span>` : ''}<span class="word-he">${esc(w.he)}</span>${spk(w.en, 'השמעת המילה', 'lg')}</div>
       <div class="slots" dir="ltr" id="slots">${[...w.en].map((c, i) => `<span class="slot${i === 0 ? ' cur' : ''}"></span>`).join('')}</div>
       <p class="ev" id="spmsg">כתבו את האות הראשונה (אות קטנה)</p></section>
     <div id="padhost" class="padhost"></div>
@@ -493,7 +542,7 @@ function viewSpellType(t) {
   C.app.innerHTML = `<main class="screen en-spell c-green">
     ${head()}
     <section class="qcard"><div class="tp"><span aria-hidden="true">⌨️</span> הקלידו את המילה באנגלית${skipBtn(t)}</div>
-      <div class="sp-q"><span class="pq-em">${w.em}</span><span class="word-he">${esc(w.he)}</span>${spk(w.en, 'השמעת המילה', 'lg')}</div>
+      <div class="sp-q">${w.em ? `<span class="pq-em">${w.em}</span>` : ''}<span class="word-he">${esc(w.he)}</span>${spk(w.en, 'השמעת המילה', 'lg')}</div>
       <div class="slots" dir="ltr" id="slots">${[...w.en].map(() => '<span class="slot"></span>').join('')}</div></section>
     <div class="kbd" dir="ltr">${rows.map(r => `<div class="kr">${[...r].map(c => `<button class="key en" data-eact="key" data-k="${c}">${c}</button>`).join('')}</div>`).join('')}
       <div class="kr"><button class="key wide" data-eact="bksp" aria-label="מחיקה">⌫</button><button class="key wide go" data-eact="typeok">✓ בדיקה</button></div></div>
@@ -554,7 +603,7 @@ function viewDone(partial) {
     ${run.n ? `<div class="score">${run.ok} <small>מתוך ${run.n}</small></div>` : ''}
     <p class="stars-row" aria-label="${run.stars} כוכבים">${Array.from({ length: Math.min(run.stars, 25) }, (_, i) => `<i style="--i:${i}">⭐</i>`).join('')}<b>${run.stars ? `${run.stars} כוכבים` : ''}</b></p>
     ${run.events.length ? `<section class="fb good unlock"><h2>🎉 חדש!</h2><ul>${run.events.map(e => `<li>${esc(e.text)}</li>`).join('')}</ul></section>` : ''}
-    ${run.plan.intro.length ? `<section class="fb good"><h2>מה למדנו היום</h2><p class="learned" dir="ltr">${run.plan.intro.map(x => EN.LET[x] ? `<b class="en">${EN.LET[x].u}${x}</b>` : `<b class="en">${EN.WD[x].em} ${esc(EN.WD[x].en)}</b>`).join(' ')}</p></section>` : ''}
+    ${run.plan.intro.length ? `<section class="fb good"><h2>מה למדנו היום</h2><p class="learned" dir="ltr">${run.plan.intro.map(x => EN.LET[x] ? `<b class="en">${EN.LET[x].u}${x}</b>` : EN.WD[x] ? `<b class="en">${EN.WD[x].em || ''} ${esc(EN.WD[x].en)}</b>` : EN.CD[x] ? `<b class="en">💬 ${esc(EN.CD[x].en)}</b>` : '').join(' ')}</p></section>` : ''}
     <ul class="sum">${Object.keys(run.byArea).map(a => `<li><span aria-hidden="true">${EN.AREAS[a].icon}</span><span>${esc(AREA_LBL[a])}</span><span class="res">${run.byArea[a].ok} מתוך ${run.byArea[a].n}</span></li>`).join('')}</ul>
     ${run.sk ? `<p class="closing">דילגת על ${run.sk} ${run.sk === 1 ? 'משימה' : 'משימות'} וחזרת אליהן בסוף. יפה!</p>` : ''}
     <p class="closing">${partial ? 'אפשר להמשיך בפעם אחרת. מה שעשית נשמר.' : good ? `${enTxt('See you tomorrow!')} נתראה מחר.` : 'כל תרגול מקרב. בפעם הבאה נחזור על מה שקשה.'}</p>
