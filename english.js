@@ -391,11 +391,11 @@
   const pairTip = (a, b) => PAIR[`${a}|${b}`] || PAIR[`${b}|${a}`] || '';
 
   // ---------- תכנון שיעור ----------
-  function planSession(p, topicId, rng, day) {
+  function planSession(p, topicId, rng, day, opts) {
     ensureProfile(p);
     const T = TOPIC[topicId], pc = pace(p, topicId);
     const tasks = [], intro = [];
-    const lockInfo = locks(p)[topicId];
+    const lockInfo = opts && opts.ignoreLocks ? null : locks(p)[topicId];
     if (lockInfo) return { topic: topicId, locked: lockInfo, tasks: [], pace: pc };
     let n = T.n + (pc.mode === 'fast' ? 2 : 0);
     const used = {}, push = t => { if (t) { tasks.push(t); used[t.area + ':' + t.item] = (used[t.area + ':' + t.item] || 0) + 1; } };

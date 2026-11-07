@@ -22,7 +22,7 @@ export function init(ctx) {
 // ---------- תפריט נושאי האנגלית ----------
 export function renderMenu() {
   C.setView('english'); run = null; stopSpeaking();
-  const p = prof(), locks = EN.locks(p), today = C.dayKey(), d = p.days[today] || { answered: 0 };
+  const p = prof(), locks = C.preview ? {} : EN.locks(p), today = C.dayKey(), d = p.days[today] || { answered: 0 };
   const info = t => {
     if (t.id === 'letters') return `${p.intro.L.length} מתוך 26 אותיות · ${EN.masteredList(p, 'lname').length} ${g('יודע', 'יודעת')} היטב`;
     if (t.id === 'write') return `${EN.masteredList(p, 'wup').length + EN.masteredList(p, 'wlo').length} אותיות כתובות יפה (מתוך 52)`;
@@ -53,7 +53,7 @@ export function renderMenu() {
 // ---------- מהלך שיעור ----------
 function startTopic(id) {
   const p = prof(), rng = mulberry((Date.now() ^ 0x9e3779b9) >>> 0);
-  const plan = EN.planSession(p, id, rng, C.dayKey());
+  const plan = EN.planSession(p, id, rng, C.dayKey(), { ignoreLocks: !!C.preview });
   if (plan.locked) { toast(plan.locked.need); return; }
   if (!plan.tasks.length) { toast('אין כרגע מה לתרגל כאן. נסו נושא אחר.'); return; }
   run = { topic: id, rng, plan, queue: plan.tasks.slice(), i: 0, n: 0, ok: 0, ms: 0, stars: 0, sk: 0, retried: new Set(), again: new Set(), events: [], t0: 0, locked: false, task: null, attempts: 0, byArea: {} };

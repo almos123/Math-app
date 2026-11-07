@@ -10,11 +10,18 @@ const T = () => window.TimesEngine;
 const EN = () => window.EnglishEngine;
 const G4 = () => window.Grade4;
 const FAM_KEY = 'mathapp:v2:family';
+// מצב תצוגה להורים (index.html?preview=1): ילדים לדוגמה, בלי קוד, בלי שמירה במכשיר ובלי שליחה לענן
+const PREVIEW = typeof location !== 'undefined' && new URLSearchParams(location.search).has('preview');
+const PREVIEW_KIDS = [{ id: 'demo-m', name: 'דני', gender: 'm', emoji: '👦', color: '#2F63D6' }, { id: 'demo-f', name: 'דנה', gender: 'f', emoji: '👧', color: '#C2410C' }];
+let previewLevel = 2;
+export const isPreview = () => PREVIEW;
+export const getPreviewLevel = () => previewLevel;
 const kidKey = (code, id) => `mathapp:v2:${code}:${id}`;
 const MAX_RECENT = 150;
 
 // ---------- משפחה ----------
 function readFamily() {
+  if (PREVIEW) return { code: 'preview', mode: 'preview', roster: PREVIEW_KIDS, test: null };
   if (!firebaseConfigured()) return { code: 'local', mode: 'local', roster: LOCAL_KIDS, test: TEST };
   try {
     const f = JSON.parse(localStorage.getItem(FAM_KEY));
@@ -73,12 +80,14 @@ function readKey(k) {
 const memory = {}; // גיבוי אם localStorage חסום
 export function loadKid(id) {
   if (!family) return fresh();
+  if (PREVIEW) { const k = 'preview:' + id; return memory[k] || (memory[k] = seedPreview(previewLevel)); }
   const k = kidKey(family.code, id);
   let d = readKey(k) || memory[k];
   if (!d && family.mode === 'local') d = readKey(`mathapp:v1:${id}`); // המשך מגרסה 1
   return d ? normalize(d) : fresh();
 }
 export function saveKid(id, data, day) {
+  if (PREVIEW) { memory['preview:' + id] = data; return; } // תצוגה בלבד: נשמר רק בזיכרון עד סגירת הדף
   data.rev = (data.rev || 0) + 1;
   data.dirty.profile = true;
   if (day) data.dirty.sessions[day] = true;
@@ -110,6 +119,25 @@ export async function restoreKid(id) {
     return true;
   } catch (e) { return false; }
 }
+
+// נתוני דוגמה לתצוגה: כל הרמות לפי הרמה שנבחרה, ובאנגלית חלק מהאותיות והמילים כבר נלמדו (והשלב הבא פתוח, כדי לראות גם כרטיסי לימוד)
+function seedPreview(level) {
+  const d = fresh(), L = Math.max(1, Math.min(5, level)), X = EN(), en = X.ensureProfile(d.programs.english), day = E().dayKey();
+  E().TOPICS.forEach(t => { d.profile.levels[t.id] = L; });
+  d.programs.times.levels.times = L;
+  G4().IDS.forEach(id => { d.programs.g4.levels[id] = L; });
+  en.lg = Math.min(X.GROUPS.length, L + 1); en.wg = en.lg; en.wt = Math.min(X.STAGES.length, L * 2);
+  const known = X.GROUPS.slice(0, en.lg - 1).join('');
+  en.intro.L = known;
+  [...known].forEach(l => { ['lname', 'lsound', 'lcase'].forEach(a => { en.st[a][l] = [3, 3, 0, day]; }); en.st.wup[l.toUpperCase()] = [3, 3, 0, day]; en.st.wlo[l] = [3, 3, 0, day]; });
+  const stagesKnown = X.STAGES.slice(0, en.wt - 1);
+  en.intro.W = [].concat(...stagesKnown.map(s => s.ids)).filter(id => X.WD[id]);
+  en.intro.W.forEach(id => { en.st.vocab[id] = [3, 3, 0, day]; });
+  en.intro.C = X.CHUNKS.slice(0, Math.min(X.CHUNKS.length - 3, 5 * L)).map(c => c.id);
+  if (L >= 4) en.intro.W.filter(id => /^[a-z]+$/.test(X.WD[id].en)).slice(0, 12).forEach(id => { en.st.spell[id] = [3, 3, 0, day]; });
+  return d;
+}
+export function previewReset(level) { previewLevel = level; Object.keys(memory).filter(k => k.startsWith('preview:')).forEach(k => delete memory[k]); }
 
 // ---------- סנכרון ----------
 const canSync = () => firebaseConfigured() && family && family.mode === 'family';

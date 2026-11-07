@@ -1,5 +1,5 @@
 // app.js — אפליקציית הילד: קוד משפחה (פעם אחת) → בחירת ילד (פעם אחת) → בית → סבב (כל הנושאים, 3–5 שאלות בכל נושא) → פידבק.
-import { getFamily, joinFamily, refreshFamily, leaveFamily, loadKid, saveKid, restoreKid, onStatus, getStatus, syncNow } from './store.js';
+import { getFamily, joinFamily, refreshFamily, leaveFamily, loadKid, saveKid, restoreKid, onStatus, getStatus, syncNow, isPreview, getPreviewLevel, previewReset } from './store.js';
 import { normCode, showCode } from './family.js';
 import * as EUI from './english-ui.js';
 
@@ -39,7 +39,7 @@ const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: 
 const g = (m, f) => (kid && kid.gender === 'f' ? f : m);
 
 const readMe = () => { try { return localStorage.getItem(ME); } catch (e) { return null; } };
-const writeMe = v => { try { v ? localStorage.setItem(ME, v) : localStorage.removeItem(ME); } catch (e) { /* ignore */ } };
+const writeMe = v => { if (isPreview()) return; try { v ? localStorage.setItem(ME, v) : localStorage.removeItem(ME); } catch (e) { /* ignore */ } };
 
 function daysToTest() {
   if (!family || !family.test || !family.test.date) return null;
@@ -169,7 +169,7 @@ function viewWho() {
   view = 'who';
   const roster = family.roster;
   app.innerHTML = `<main class="screen who">
-    <h1>מי מתרגל?</h1>
+    <h1>מי מתרגל?</h1>${family.mode === 'preview' ? '<p class="lead">ילדים לדוגמה לבדיקת האפליקציה. אפשר לבחור למעלה באיזו רמה יהיו השאלות. כל מה שעונים כאן לא נשמר ולא נספר בציון.</p>' : ''}
     ${roster.length ? `<div class="who-btns">${roster.map(k => `<button class="kid-btn" data-act="pick" data-id="${esc(k.id)}" style="--kc:${esc(k.color || '#2F63D6')}"><span class="em" aria-hidden="true">${esc(k.emoji || '🙂')}</span>${esc(k.name)}</button>`).join('')}</div>`
       : `<p class="lead">עדיין אין ילדים במשפחה הזו. ההורה מוסיף אותם בלוח ההורה.</p><button class="btn" data-act="reload">רענון</button>`}
     <div class="spacer"></div>
@@ -571,12 +571,27 @@ document.addEventListener('keydown', e => { // מקלדת פיזית (מחשב /
 });
 onStatus(s => { const el = document.getElementById('sync'); if (el) el.textContent = syncText(s); });
 
-EUI.init({ app, data: () => data, kid: () => kid, save: day => saveKid(kid.id, data, day), mascot, confetti, home: () => viewHome(), setView: v => { view = v; run = null; }, dayKey: () => E.dayKey() });
+EUI.init({ preview: isPreview(), app, data: () => data, kid: () => kid, save: day => saveKid(kid.id, data, day), mascot, confetti, home: () => viewHome(), setView: v => { view = v; run = null; }, dayKey: () => E.dayKey() });
 
 // נקודת גישה לבדיקות אוטומטיות (לקריאה בלבד)
 window.__mathapp = { get run() { return run; }, get data() { return data; }, get kid() { return kid; }, get family() { return family; }, get view() { return view; } };
 
+// ---------- מצב תצוגה להורים ----------
+function previewBar() {
+  const bar = document.createElement('div');
+  bar.className = 'pv-bar'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', 'מצב תצוגה להורים');
+  bar.innerHTML = `<span>👀 <b>תצוגה להורים</b> · לא נשמר ולא נשלח</span>
+    <label>רמה <select id="pvlevel" aria-label="רמת השאלות לתצוגה">${[1, 2, 3, 4, 5].map(i => `<option value="${i}"${i === getPreviewLevel() ? ' selected' : ''}>${i} · ${E.LEVEL_NAMES[i]}</option>`).join('')}</select></label>
+    <a href="parent.html" class="pv-back">חזרה ללוח ההורים</a>`;
+  document.body.prepend(bar); document.body.classList.add('pv');
+  bar.querySelector('#pvlevel').addEventListener('change', e => {
+    previewReset(Number(e.target.value));
+    if (kid) { data = loadKid(kid.id); viewHome(); } else viewWho();
+  });
+}
+
 // ---------- התחלה ----------
+if (isPreview()) previewBar();
 family = getFamily();
 if (!family) viewCode();
 else {

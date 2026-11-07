@@ -500,7 +500,7 @@ function renderDash(rows, banner, withFamily) {
     cd = ` · ${d > 1 ? `עוד ${d} ימים` : d === 1 ? 'מחר' : d === 0 ? 'היום' : ''}`.replace(/ · $/, '');
   }
   app.innerHTML = `<main class="p-wrap">
-    <div class="p-head"><div><h1>התקדמות הילדים</h1><p class="p-sub">${test && test.date ? `${esc(test.name || 'מבדק')} · ${dm(test.date)}${cd}` : ''}</p></div><div class="p-actions"><button class="btn" data-act="openall">פתיחת הכול</button><button class="btn" data-act="closeall">סגירת הכול</button><button class="btn" data-act="refresh">רענון</button>${user ? '<button class="link" data-act="signout">יציאה</button>' : ''}</div></div>
+    <div class="p-head"><div><h1>התקדמות הילדים</h1><p class="p-sub">${test && test.date ? `${esc(test.name || 'מבדק')} · ${dm(test.date)}${cd}` : ''}</p></div><div class="p-actions"><a class="btn pv-link" href="index.html?preview=1">👀 האפליקציה של הילדים</a><button class="btn" data-act="openall">פתיחת הכול</button><button class="btn" data-act="closeall">סגירת הכול</button><button class="btn" data-act="refresh">רענון</button>${user ? '<button class="link" data-act="signout">יציאה</button>' : ''}</div></div>
     ${banner ? `<p class="banner">${banner}</p>` : ''}
     ${withFamily ? familyPanel() : ''}
     ${rows.length ? rows.map(kidCard).join('') : '<p class="empty">הוסיפו ילד כדי להתחיל.</p>'}
