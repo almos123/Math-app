@@ -7,6 +7,7 @@ import { normCode, validCode, fetchFamilyDoc } from './family.js';
 
 const E = () => window.MathEngine;
 const T = () => window.TimesEngine;
+const EN = () => window.EnglishEngine;
 const FAM_KEY = 'mathapp:v2:family';
 const kidKey = (code, id) => `mathapp:v2:${code}:${id}`;
 const MAX_RECENT = 150;
@@ -47,7 +48,7 @@ export function leaveFamily() { family = null; try { localStorage.removeItem(FAM
 
 // ---------- נתוני ילד ----------
 function fresh() {
-  return { rev: 0, profile: E().newProfile(), programs: { times: T().newProfile() }, sessions: {}, dirty: { profile: false, sessions: {} }, recent: [], lastRound: null, lastTimes: null }; // ילד שלא תרגל לא נכתב לענן
+  return { rev: 0, profile: E().newProfile(), programs: { times: T().newProfile(), english: EN().newProfile() }, sessions: {}, dirty: { profile: false, sessions: {} }, recent: [], lastRound: null, lastTimes: null }; // ילד שלא תרגל לא נכתב לענן
 }
 function normalize(d) {
   d.profile = E().ensureProfile(d.profile || E().newProfile());
@@ -60,6 +61,7 @@ function normalize(d) {
   d.lastTimes = d.lastTimes || null;
   d.programs = d.programs || {};
   d.programs.times = T().ensureProfile(d.programs.times); // תוכניות נוספות יתווספו כאן
+  d.programs.english = EN().ensureProfile(d.programs.english);
   return d;
 }
 function readKey(k) {
@@ -97,10 +99,10 @@ export async function restoreKid(id) {
     if (!snap.exists()) return false;
     const c = snap.data();
     const used = days => days && Object.keys(days).some(k => days[k].answered > 0);
-    const px = c.programs && c.programs.times;
-    if (!used(c.days) && !(px && used(px.days))) return false;
+    const px = c.programs && c.programs.times, pe = c.programs && c.programs.english;
+    if (!used(c.days) && !(px && used(px.days)) && !(pe && used(pe.days))) return false;
     const profile = E().ensureProfile({ levels: c.levels, stats: c.stats, days: c.days, hist: c.hist, baseline: c.baseline, skills: c.skills, start: c.start || null, lastCounts: c.lastCounts });
-    const d = normalize({ rev: 1, profile, programs: { times: px ? T().ensureProfile(px) : T().newProfile() }, sessions: {}, dirty: { profile: false, sessions: {} }, recent: [] });
+    const d = normalize({ rev: 1, profile, programs: { times: px ? T().ensureProfile(px) : T().newProfile(), english: EN().ensureProfile(pe ? JSON.parse(JSON.stringify(pe)) : null) }, sessions: {}, dirty: { profile: false, sessions: {} }, recent: [] });
     const k = kidKey(family.code, id);
     try { localStorage.setItem(k, JSON.stringify(d)); } catch (e) { memory[k] = d; }
     return true;
@@ -134,14 +136,18 @@ async function flush(id) {
   const snapshotRev = d.rev;
   try {
     const { db, fs } = await ensureKidAuth();
-    const kid = family.roster.find(k => k.id === id) || {}, p = d.profile, x = d.programs.times;
+    const kid = family.roster.find(k => k.id === id) || {}, p = d.profile, x = d.programs.times, en = d.programs.english;
     const timesUsed = Object.keys(x.days).some(k => x.days[k].answered > 0);
+    const engUsed = EN().used(en) || en.intro.L.length > 0 || en.intro.W.length > 0;
+    const programs = {};
+    if (timesUsed) programs.times = { levels: x.levels, stats: x.stats, days: x.days, hist: x.hist, baseline: x.baseline, skills: x.skills, start: x.start || null, facts: x.facts, rlog: x.rlog || [] };
+    if (engUsed) programs.english = en;
     await fs.setDoc(fs.doc(db, 'families', code, 'kids', id), {
       kidId: id, name: kid.name || id, gender: kid.gender === 'f' ? 'f' : 'm',
       levels: p.levels, stats: p.stats, days: p.days, hist: p.hist, baseline: p.baseline, skills: p.skills,
       start: p.start || null, lastCounts: p.lastCounts,
-      streak: T().streakAny(p, x),
-      ...(timesUsed ? { programs: { times: { levels: x.levels, stats: x.stats, days: x.days, hist: x.hist, baseline: x.baseline, skills: x.skills, start: x.start || null, facts: x.facts, rlog: x.rlog || [] } } } : {}),
+      streak: T().streakAny(p, x, undefined, en),
+      ...(Object.keys(programs).length ? { programs } : {}),
       lastActive: new Date().toISOString(),
       updatedAt: fs.serverTimestamp(),
     }, { merge: true });

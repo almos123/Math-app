@@ -170,8 +170,9 @@
     return out;
   }
   // רצף ימים: יום נחשב אם בוצע בו אחד מהתרגולים (מבדק: 15 שאלות, לוח הכפל: 10 שאלות)
-  function streakAny(testProfile, timesProfile, today) {
-    const day = k => ((testProfile && testProfile.days[k] ? testProfile.days[k].answered : 0) >= E.ROUND_MIN) || ((timesProfile && timesProfile.days[k] ? timesProfile.days[k].answered : 0) >= PER_SESSION);
+  function streakAny(testProfile, timesProfile, today, englishProfile) {
+    const day = k => ((testProfile && testProfile.days[k] ? testProfile.days[k].answered : 0) >= E.ROUND_MIN) || ((timesProfile && timesProfile.days[k] ? timesProfile.days[k].answered : 0) >= PER_SESSION)
+      || ((englishProfile && englishProfile.days && englishProfile.days[k] ? englishProfile.days[k].answered : 0) >= 8);
     const cur = new Date((today || E.dayKey()) + 'T12:00:00'); let n = 0;
     if (!day(E.dayKey(cur))) cur.setDate(cur.getDate() - 1);
     while (day(E.dayKey(cur))) { n++; cur.setDate(cur.getDate() - 1); }

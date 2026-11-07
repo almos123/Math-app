@@ -5,9 +5,9 @@
    2) מהירות: רק בתשובות נכונות, מול זמן יעד לנושא. משפיעה עד 12% מהציון, כדי שהבנה תישאר הגורם המרכזי.
    ציון מוצג רק כשיש מספיק נתונים. אחרת: "לא זמין". */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./insights.js'), require('./engine.js'), require('./times.js'));
-  else root.Ability = factory(root.Insights, root.MathEngine, root.TimesEngine);
-})(typeof self !== 'undefined' ? self : this, function (I, E, T) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./insights.js'), require('./engine.js'), require('./times.js'), require('./english.js'));
+  else root.Ability = factory(root.Insights, root.MathEngine, root.TimesEngine, root.EnglishEngine);
+})(typeof self !== 'undefined' ? self : this, function (I, E, T, EN) {
   'use strict';
 
   // זמני יעד לתשובה נכונה (מילי-שניות). אלה פרמטרים של המערכת ולא מדד רשמי; ניתן לשנות כאן.
@@ -71,14 +71,18 @@
     out.score = clamp(Math.round(100 * out.ladder * factor), 1, 100);
     return out;
   }
-  // ציון כללי לילד: ממוצע התוכניות שיש להן ציון
+  // ציון כללי לילד: ממוצע המקצועות שיש להם ציון (מתמטיקה = ממוצע ההכנה למבדק ולוח הכפל; אנגלית)
   function overallScore(profile) {
     const test = abilityScore(profile, 'test');
     const xp = profile && profile.programs && profile.programs.times;
     const times = abilityScore(xp, 'times');
-    const have = [test, times].filter(x => x.score !== null);
-    const score = have.length ? Math.round(have.reduce((a, x) => a + x.score, 0) / have.length) : null;
-    return { score, band: band(score), test, times, programs: have.length };
+    const ep = profile && profile.programs && profile.programs.english;
+    const english = EN && ep ? EN.abilityScore(EN.ensureProfile(ep)) : { score: null, need: 'אין נתונים', areas: [] };
+    const mh = [test, times].filter(x => x.score !== null);
+    const math = mh.length ? Math.round(mh.reduce((a, x) => a + x.score, 0) / mh.length) : null;
+    const have = [math, english.score].filter(x => x !== null);
+    const score = have.length ? Math.round(have.reduce((a, x) => a + x, 0) / have.length) : null;
+    return { score, band: band(score), test, times, english, math, programs: mh.length + (english.score !== null ? 1 : 0) };
   }
 
   // ---------- התנהלות: דילוגים והפסקות באמצע ----------
@@ -251,6 +255,15 @@
       tprog.summaryParas = a.paragraphs;
     }
     rep.programs.push(tprog);
+
+    // ---- אנגלית ----
+    const ep = profile.programs && profile.programs.english;
+    if (EN) {
+      const eprog = EN.report({ name, gender: gen }, EN.ensureProfile(ep ? ep : EN.newProfile()));
+      eprog.ability = ov.english;
+      (eprog.notes || []).forEach(n => rep.notes.push(n));
+      rep.programs.push(eprog);
+    }
 
     // ---- התנהלות כוללת והמלצות ----
     const sk = rep.programs.reduce((a, p) => a + (p.engagement ? p.engagement.skips : 0), 0);

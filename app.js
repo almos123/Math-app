@@ -1,8 +1,9 @@
 // app.js — אפליקציית הילד: קוד משפחה (פעם אחת) → בחירת ילד (פעם אחת) → בית → סבב (כל הנושאים, 3–5 שאלות בכל נושא) → פידבק.
 import { getFamily, joinFamily, refreshFamily, leaveFamily, loadKid, saveKid, restoreKid, onStatus, getStatus, syncNow } from './store.js';
 import { normCode, showCode } from './family.js';
+import * as EUI from './english-ui.js';
 
-const E = window.MathEngine, I = window.Insights, T = window.TimesEngine, A = window.Ability;
+const E = window.MathEngine, I = window.Insights, T = window.TimesEngine, A = window.Ability, EN = window.EnglishEngine;
 const app = document.getElementById('app');
 const ME = 'mathapp:v2:me';
 
@@ -174,23 +175,44 @@ function viewWho() {
 
 function viewHome() {
   view = 'home'; run = null;
-  const today = E.dayKey(), tp = data.profile, xp = data.programs.times;
-  const dt = tp.days[today] || { answered: 0, correct: 0, rounds: 0 }, dx = xp.days[today] || { answered: 0, correct: 0, rounds: 0 };
-  const streak = T.streakAny(tp, xp), cd = countdownText();
-  const answered = dt.answered + dx.answered, rounds = (dt.rounds || 0) + (dx.rounds || 0);
-  const goal = Math.min(1, Math.max(dt.answered / E.ROUND_MIN, dx.answered / T.PER_SESSION));
-  const lvX = xp.levels.times;
-  const sumSt = pr => Object.keys(pr.days || {}).reduce((s, d) => s + (pr.days[d].st || 0), 0), totalStars = sumSt(tp) + sumSt(xp);
-  const labT = (dt.rounds || 0) > 0 ? 'סבב נוסף' : dt.answered > 0 ? 'ממשיכים' : 'מתחילים';
-  const labX = (dx.rounds || 0) > 0 ? 'עוד תרגול' : 'מתחילים';
+  const today = E.dayKey(), tp = data.profile, xp = data.programs.times, ep = data.programs.english;
+  const dt = tp.days[today] || { answered: 0, correct: 0, rounds: 0 }, dx = xp.days[today] || { answered: 0, correct: 0, rounds: 0 }, de = ep.days[today] || { answered: 0, rounds: 0 };
+  const streak = T.streakAny(tp, xp, undefined, ep);
+  const answered = dt.answered + dx.answered + de.answered, rounds = (dt.rounds || 0) + (dx.rounds || 0) + (de.rounds || 0);
+  const goal = Math.min(1, Math.max(dt.answered / E.ROUND_MIN, dx.answered / T.PER_SESSION, de.answered / 8));
+  const sumSt = pr => Object.keys(pr.days || {}).reduce((s, d) => s + (pr.days[d].st || 0), 0), totalStars = sumSt(tp) + sumSt(xp) + sumSt(ep);
+  const cd = countdownText();
   app.innerHTML = `<main class="screen">
     <div class="top"><div class="greet"><div class="hm" aria-hidden="true">${mascot('happy')}</div><div><h1>שלום ${esc(kid.name)} ${esc(kid.emoji || '')}</h1><p class="ev">${esc(g('מוכן', 'מוכנה'))} להרפתקה של היום?</p></div></div><button class="link" data-act="switch">לא ${esc(kid.name)}?</button></div>
     <div class="chips" aria-label="הישגים"><span class="chip-s" aria-label="${totalStars} כוכבים">⭐ <b>${totalStars}</b></span>${streak > 0 ? `<span class="chip-s fire" aria-label="${streak} ימים ברצף">🔥 <b>${streak}</b></span>` : ''}</div>
     <section class="today" aria-label="תרגול היום">
       <div class="row"><span>היום</span><b>${answered} שאלות${rounds ? ` · ${rounds} ${rounds === 1 ? 'סבב' : 'סבבים'}` : ''}</b></div>
       <div class="goalbar" aria-hidden="true"><i style="width:${Math.round(goal * 100)}%"></i></div>
-      <div class="ev">${goal >= 1 ? 'יעד היום הושג ✓' : 'יעד יומי: סבב אחד בהכנה למבדק (15 שאלות) או בלוח הכפל (10 שאלות)'}${streak > 0 ? ` · ${streak === 1 ? 'יום אחד ברצף' : streak + ' ימים ברצף'}` : ''}</div>
+      <div class="ev">${goal >= 1 ? 'יעד היום הושג ✓' : 'יעד יומי: סבב אחד במתמטיקה או שיעור אחד באנגלית'}${streak > 0 ? ` · ${streak === 1 ? 'יום אחד ברצף' : streak + ' ימים ברצף'}` : ''}</div>
     </section>
+    <p class="lead pick">מה לומדים היום?</p>
+    <div class="subjects">
+      <button class="subj s-math" data-act="subject" data-s="math" aria-label="מתמטיקה">
+        <span class="sj-ic" aria-hidden="true"><b class="d1">7</b><b class="op">×</b><b class="d2">3</b></span>
+        <span class="sj-tx"><b>מתמטיקה</b><small>הכנה למבדק · לוח הכפל</small>${cd ? `<small class="cdm">${esc(cd)}</small>` : ''}</span>
+        <span class="sj-go" aria-hidden="true">←</span></button>
+      <button class="subj s-eng" data-act="subject" data-s="english" aria-label="אנגלית">
+        <span class="sj-ic" aria-hidden="true"><b class="d1">A</b><b class="op">b</b><b class="d2">C</b></span>
+        <span class="sj-tx"><b>אנגלית</b><small>אותיות · מילים · כתיבה · דיבור</small>${ep.intro.L.length || ep.intro.W.length ? `<small class="cdm">${ep.intro.L.length} אותיות · ${ep.intro.W.length} מילים</small>` : ''}</span>
+        <span class="sj-go" aria-hidden="true">←</span></button>
+    </div>
+    <p class="sync" id="sync">${syncText(getStatus())}</p>
+  </main>`;
+}
+function viewMath() {
+  view = 'math'; run = null;
+  const today = E.dayKey(), tp = data.profile, xp = data.programs.times;
+  const dt = tp.days[today] || { answered: 0, correct: 0, rounds: 0 }, dx = xp.days[today] || { answered: 0, correct: 0, rounds: 0 };
+  const cd = countdownText(), lvX = xp.levels.times;
+  const labT = (dt.rounds || 0) > 0 ? 'סבב נוסף' : dt.answered > 0 ? 'ממשיכים' : 'מתחילים';
+  const labX = (dx.rounds || 0) > 0 ? 'עוד תרגול' : 'מתחילים';
+  app.innerHTML = `<main class="screen">
+    <div class="sub-top"><button class="back" data-act="home" aria-label="חזרה לבחירת מקצוע">→</button><h1>🔢 מתמטיקה</h1></div>
     <p class="lead pick">מה מתרגלים?</p>
     <section class="prog t-test" aria-label="הכנה למבדק">
       <div class="ph"><span class="pi" aria-hidden="true"><i>📝</i><b class="fl f1">➕</b><b class="fl f2">🔷</b><b class="fl f3">🍕</b></span><div><h2>הכנה למבדק</h2><p class="ev">5 נושאים, 3 עד 5 שאלות בכל נושא</p></div></div>
@@ -288,7 +310,7 @@ function viewDone() {
     <ul class="sum">${blocks.map(b => { const t = topicOf(b.id), lv = levelOf(b.id); return `<li class="t-${t.id}"><span aria-hidden="true">${t.icon}</span><span>${esc(t.short)}<br><span class="ev">רמה ${lv} · ${E.LEVEL_NAMES[lv]} ${evFor(b.id)}</span></span><span class="res">${b.ok} מתוך ${b.n}</span></li>`; }).join('')}</ul>
     <div class="spacer"></div>
     <button class="btn primary big" data-act="start" data-program="${run.program}">${run.program === 'times' ? 'עוד תרגול' : 'עוד סבב'}</button>
-    <button class="btn big" data-act="home">סיום</button>
+    <button class="btn big" data-act="mathmenu">סיום</button>
   </main>`;
 }
 
@@ -358,8 +380,8 @@ function skipQ() {
 }
 function answeredCount() { return run ? run.blocks.reduce((a, b) => a + b.n, 0) : 0; }
 function openStop() {
-  if (!run) return viewHome();
-  if (answeredCount() === 0) return viewHome();
+  if (!run) return viewMath();
+  if (answeredCount() === 0) return viewMath();
   clockPause();
   const n = answeredCount();
   const m = document.createElement('div');
@@ -373,9 +395,9 @@ function closeStop() { const m = document.getElementById('modal'); if (m) m.remo
 function stopRun(showSummary) {
   closeStop();
   const n = answeredCount();
-  if (n === 0) return viewHome();
+  if (n === 0) return viewMath();
   run.partial = true;
-  if (showSummary) finishRound(true); else { recordPartial(); viewHome(); }
+  if (showSummary) finishRound(true); else { recordPartial(); viewMath(); }
 }
 function recordPartial() {
   const day = E.dayKey(), prof = profileOf(run.program), n = answeredCount();
@@ -513,6 +535,8 @@ app.addEventListener('click', e => {
   else if (act === 'start') startRun(b.dataset.program);
   else if (act === 'begin') nextQ();
   else if (act === 'home') viewHome();
+  else if (act === 'mathmenu') viewMath();
+  else if (act === 'subject') { if (b.dataset.s === 'english') EUI.renderMenu(); else viewMath(); }
   else if (act === 'quit') openStop();
   else if (act === 'resume') { closeStop(); clockResume(); }
   else if (act === 'finish') stopRun(true);
@@ -532,6 +556,8 @@ document.addEventListener('keydown', e => { // מקלדת פיזית (מחשב /
   else if (e.key === 'Enter') submit(run.typed);
 });
 onStatus(s => { const el = document.getElementById('sync'); if (el) el.textContent = syncText(s); });
+
+EUI.init({ app, data: () => data, kid: () => kid, save: day => saveKid(kid.id, data, day), mascot, confetti, home: () => viewHome(), setView: v => { view = v; run = null; }, dayKey: () => E.dayKey() });
 
 // נקודת גישה לבדיקות אוטומטיות (לקריאה בלבד)
 window.__mathapp = { get run() { return run; }, get data() { return data; }, get kid() { return kid; }, get family() { return family; }, get view() { return view; } };
