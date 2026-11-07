@@ -10,7 +10,7 @@ const g = (m, f) => (C.kid() && C.kid().gender === 'f' ? f : m);
 const reduced = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const CHEERS = ['Great job!', 'Super!', 'Well done!', 'Yes!', 'Awesome!', 'Perfect!'];
 const CHEERS_HE = ['מצוין!', 'כל הכבוד!', 'נכון מאוד!', 'יופי!', 'בדיוק!'];
-const KIND_ICON = { L_hear: '👂', L_name: '🔤', L_case: '🅰️', L_first: '🔊', L_pic: '🖼️', V_pic2word: '🧩', V_word2he: '🧩', V_he2word: '🧩', H_word2pic: '👂', H_word2he: '👂', R_word2pic: '📖', R_word2he: '📖', F_rhyme: '🎵', F_mid: '🎵', F_end: '🎵', K_mean: '💬', K_reply: '💬', R_sent: '📖', W_letter: '✍️', S_letter: '🗣️', S_word: '🗣️', P_hand: '📝', P_type: '⌨️' };
+const KIND_ICON = { L_hear: '👂', L_name: '🔤', L_case: '🅰️', L_first: '🔊', L_pic: '🖼️', V_pic2word: '🧩', V_word2he: '🧩', V_he2word: '🧩', H_word2pic: '👂', H_word2he: '👂', R_word2pic: '📖', R_word2he: '📖', F_rhyme: '🎵', F_mid: '🎵', F_end: '🎵', K_mean: '💬', K_reply: '💬', R_sent: '📖', W_letter: '✍️', N_name: '🪪', S_letter: '🗣️', S_word: '🗣️', P_hand: '📝', P_type: '⌨️' };
 const enTxt = s => `<span class="en" dir="ltr">${esc(s)}</span>`;
 
 export function init(ctx) {
@@ -36,7 +36,7 @@ export function renderMenu() {
   const prog = t => { const A = t.areas.map(a => EN.areaInfo(p, a)); return Math.round(100 * A.reduce((x, a) => x + a.progress, 0) / A.length); };
   C.app.innerHTML = `<main class="screen en-menu">
     <div class="sub-top"><button class="back" data-eact="back" aria-label="חזרה לבחירת מקצוע">→</button><h1><span class="abc" aria-hidden="true"><b>A</b><b>b</b><b>C</b></span> אנגלית</h1></div>
-    <div class="en-hero" aria-hidden="true">${C.mascot('happy')}<div class="bubble"><b class="en" dir="ltr">Hello! 👋</b><span>שלום ${esc(C.kid().name)}, בוא${g('', 'י')} נלמד אנגלית</span></div></div>
+    <div class="en-hero" aria-hidden="true">${C.mascot('happy')}<div class="bubble"><b class="en" dir="ltr">Hello${EN.nameOf(C.kid()) ? ', ' + esc(EN.nameOf(C.kid())) : ''}! 👋</b><span>שלום ${esc(C.kid().name)}, בוא${g('', 'י')} נלמד אנגלית</span></div></div>
     ${d.answered ? `<p class="ev center">היום: ${d.answered} תשובות באנגלית ⭐ ${d.st || 0}</p>` : ''}
     <div class="en-topics">${EN.TOPICS.map((t, i) => {
       const lk = locks[t.id], pc = EN.pace(p, t.id), pr = prog(t);
@@ -53,7 +53,7 @@ export function renderMenu() {
 // ---------- מהלך שיעור ----------
 function startTopic(id) {
   const p = prof(), rng = mulberry((Date.now() ^ 0x9e3779b9) >>> 0);
-  const plan = EN.planSession(p, id, rng, C.dayKey(), { ignoreLocks: !!C.preview });
+  const plan = EN.planSession(p, id, rng, C.dayKey(), { ignoreLocks: !!C.preview, name: EN.nameOf(C.kid()) });
   if (plan.locked) { toast(plan.locked.need); return; }
   if (!plan.tasks.length) { toast('אין כרגע מה לתרגל כאן. נסו נושא אחר.'); return; }
   run = { topic: id, rng, plan, queue: plan.tasks.slice(), i: 0, n: 0, ok: 0, ms: 0, stars: 0, sk: 0, retried: new Set(), again: new Set(), events: [], t0: 0, locked: false, task: null, attempts: 0, byArea: {} };
@@ -90,7 +90,7 @@ function next() {
   if (t.kind === 'introP') return viewIntroP(t);
   if (t.kind === 'W_letter') return viewWrite(t);
   if (t.kind === 'S_letter' || t.kind === 'S_word') return viewSpeak(t);
-  if (t.kind === 'P_hand') return viewSpellHand(t);
+  if (t.kind === 'P_hand' || t.kind === 'N_name') return viewSpellHand(t);
   if (t.kind === 'P_type') return viewSpellType(t);
   return viewChoice(t);
 }
@@ -246,7 +246,7 @@ function commit(t, ok, o) {
   t.res = ok; run.n++; if (ok) { run.ok++; run.stars++; }
   if (o.ms && o.timed) run.ms += o.ms;
   const a = run.byArea[t.area] || (run.byArea[t.area] = { n: 0, ok: 0 }); a.n++; if (ok) a.ok++;
-  if (!ok && !run.again.has(t.area + ':' + t.item) && !/^(S_|P_)/.test(t.kind)) { // נחזור לזה פעם אחת בסוף
+  if (!ok && !run.again.has(t.area + ':' + t.item) && !/^(S_|P_|N_)/.test(t.kind)) { // נחזור לזה פעם אחת בסוף
     run.again.add(t.area + ':' + t.item);
     const again = regen(t); if (again) run.queue.push(again);
   }
@@ -487,6 +487,7 @@ function selfOk() {
 
 // ---------- איות בכתב יד ----------
 function viewSpellHand(t) {
+  if (t.kind === 'N_name') return viewName(t);
   const w = EN.WD[t.word];
   run.sp = { word: w.en, pos: 0, wrongs: 0, reveals: 0, tries: 0 };
   C.app.innerHTML = `<main class="screen en-spell c-green">
@@ -503,6 +504,24 @@ function viewSpellHand(t) {
   fitPad();
   say(w.en);
 }
+// כותבים את השם שלי: דוגמה למעלה, אות ראשונה גדולה ושאר האותיות קטנות, עם הדגמה לכל אות
+function viewName(t) {
+  run.sp = { word: t.name, pos: 0, wrongs: 0, reveals: 0, tries: 0, name: true };
+  C.app.innerHTML = `<main class="screen en-spell c-pink">
+    ${head()}
+    <section class="qcard"><div class="tp"><span aria-hidden="true">🪪</span> כותבים את השם שלי באנגלית${skipBtn(t)}</div>
+      <div class="name-model en" dir="ltr">${esc(t.name)}</div>
+      <p class="rule">שם תמיד מתחיל באות גדולה (${esc(t.name[0])}), ושאר האותיות קטנות.</p>
+      <div class="slots" dir="ltr" id="slots">${[...t.name].map((c, i) => `<span class="slot${i === 0 ? ' cur' : ''}"></span>`).join('')}</div>
+      <p class="ev" id="spmsg">כתבו את האות הראשונה: ${esc(t.name[0])} (אות גדולה)</p></section>
+    <div id="padhost" class="padhost"></div>
+    <div class="pad-btns"><button class="btn ghost" data-eact="demo">▶️ הדגמה</button><button class="btn ghost" data-eact="clear">🧽 מחיקה</button><button class="btn primary" data-eact="spcheck">✓ בדיקת האות</button></div>
+    <div id="sheet"></div>
+  </main>`;
+  run.pad = makePad(document.getElementById('padhost'), { letter: t.name[0], trace: false, label: 'משטח כתיבה' });
+  fitPad();
+  say(`My name is ${t.name}`);
+}
 function spellCheck() {
   const t = run.task, s = run.sp, pad = run.pad; if (!pad || run.locked) return;
   if (!pad.strokes.length) { toast('כותבים את האות על הקווים'); return; }
@@ -510,11 +529,13 @@ function spellCheck() {
   if (r.ok) {
     slots[s.pos].textContent = want; slots[s.pos].className = 'slot ok'; s.pos++; s.tries = 0; pad.clear();
     if (s.pos >= s.word.length) return spellDone();
-    slots[s.pos].classList.add('cur'); if (msg) msg.textContent = `יופי! עכשיו האות ה-${s.pos + 1}`;
+    slots[s.pos].classList.add('cur'); if (msg) msg.textContent = s.name ? `יופי! עכשיו ${s.word[s.pos]} (אות קטנה)` : `יופי! עכשיו האות ה-${s.pos + 1}`;
+    if (s.name) pad.letter = s.word[s.pos];
     return;
   }
   s.tries++; s.wrongs++;
   if (s.tries === 1) {
+    if (s.name) { if (msg) msg.textContent = r.issues.includes('case') ? (s.pos === 0 ? `שם מתחיל באות גדולה: ${want}. נסו שוב.` : `כאן כותבים ${want} קטנה. נסו שוב.`) : `${r.tips[0] || 'נסו שוב, לאט ובגדול.'} אפשר ללחוץ על "הדגמה".`; pad.clear(); return; }
     if (msg) msg.textContent = r.guess && r.guess !== want && r.issues.includes('other') ? `זו נראית כמו ${r.guess}, אבל במילה הזו צריך אות אחרת. הקשיבו שוב 🔊 ונסו.` : r.issues.includes('case') ? 'במילים כותבים אותיות קטנות. נסו שוב.' : 'האות לא יצאה ברורה. נסו שוב, לאט ובגדול.';
     say(s.word, { slow: true }); pad.clear();
   } else { // רמז: מראים את האות
@@ -523,11 +544,13 @@ function spellCheck() {
     if (msg) msg.textContent = `האות הייתה ${want}. ממשיכים!`;
     if (s.pos >= s.word.length) return spellDone();
     slots[s.pos].classList.add('cur');
+    if (s.name) pad.letter = s.word[s.pos];
   }
 }
 function spellDone() {
   const t = run.task, s = run.sp; run.locked = true;
   const ok = s.reveals === 0, res = commit(t, ok, {});
+  if (s.name) { if (ok) sparkle(); sheet(ok, ok ? [`כתבת את השם שלך באנגלית: ${t.name}!`, 'אות ראשונה גדולה, ושאר האותיות קטנות. בדיוק ככה.'] : [`השם שלך נכתב: ${t.name.split('').join(' - ')}`, 'נתרגל אותו שוב בשיעור הבא.'], res, [{ t: `My name is ${t.name}`, label: 'My name is…' }]); say(`My name is ${t.name}`); return; }
   const w = EN.WD[t.word];
   if (ok) sparkle();
   sheet(ok, ok ? [`${w.en} ${w.em} = ${w.he}`, s.wrongs ? 'תיקנת את עצמך, מצוין!' : 'כתבת את כל המילה נכון!'] : [`המילה נכתבת: ${w.en.split('').join(' - ')}`, 'נחזור עליה בפעם הבאה. כדאי לומר את הצלילים בזמן הכתיבה.'], res, [{ t: w.en, label: 'איך אומרים' }]);

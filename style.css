@@ -693,3 +693,6 @@ table.en-areas { font-size: 13px; } table.en-areas td { vertical-align: top; } t
 .pv-bar a { color: #FFC83D; font-weight: 700; }
 body.pv .screen { min-height: calc(100dvh - 40px); }
 .pv-link { text-decoration: none; color: var(--ink); display: inline-flex; align-items: center; }
+.name-model { text-align: center; font-size: 54px; font-weight: 700; color: var(--tc); letter-spacing: .06em; line-height: 1.1; }
+.kids .enname { font-size: 13.5px; color: var(--ink2); } .kids form.enf { display: inline-flex; gap: 6px; align-items: center; }
+.kids form.enf input { width: 110px; font: inherit; padding: 4px 8px; border: 2px solid var(--line); border-radius: 8px; direction: ltr; }

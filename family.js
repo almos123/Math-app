@@ -75,6 +75,14 @@ export async function removeChild(code, kidId) {
   await fs.deleteDoc(fs.doc(db, 'families', code, 'kids', kidId));
   await fs.updateDoc(ref, { roster: (d.roster || []).filter(k => k.id !== kidId), kidIds: (d.kidIds || []).filter(i => i !== kidId) });
 }
+// שם הילד באנגלית (לתרגול "כותבים את השם שלי"): אותיות באנגלית בלבד, אות ראשונה גדולה
+export async function setEnName(code, kidId, en) {
+  const clean = String(en || '').replace(/[^A-Za-z]/g, '').slice(0, 12);
+  const v = clean ? clean[0].toUpperCase() + clean.slice(1).toLowerCase() : '';
+  const { db, fs } = await loadFirebase();
+  const ref = fs.doc(db, 'families', code), d = (await fs.getDoc(ref)).data();
+  await fs.updateDoc(ref, { roster: (d.roster || []).map(k => (k.id === kidId ? Object.assign({}, k, { en: v }) : k)) });
+}
 export async function setTest(code, test) {
   const { db, fs } = await loadFirebase();
   await fs.updateDoc(fs.doc(db, 'families', code), { test });

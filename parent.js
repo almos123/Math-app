@@ -2,7 +2,7 @@
 // מקור הנתונים: Firestore (אחרי כניסה עם Google). אם Firebase לא הוגדר — רק מה ששמור במכשיר הזה.
 import { firebaseConfigured, loadFirebase } from './fb.js';
 import { getFamily, loadKid } from './store.js';
-import { listFamilies, createFamily, addChild, removeChild, setTest, inviteParent, removeParent, showCode, MAX_KIDS } from './family.js';
+import { listFamilies, createFamily, addChild, removeChild, setTest, setEnName, inviteParent, removeParent, showCode, MAX_KIDS } from './family.js';
 
 const E = window.MathEngine, I = window.Insights, A = window.Ability;
 const app = document.getElementById('app');
@@ -478,7 +478,7 @@ function familyPanel() {
     <div class="codebox"><div><span class="p-sub">קוד משפחה (לילדים, פעם אחת באפליקציה)</span><b class="code" dir="ltr" id="famcode">${esc(showCode(fam.code))}</b></div><button class="btn" data-act="copy">העתקה</button></div>
     <p class="p-sub" id="copied" role="status"></p>
     <h3>ילדים (${fam.roster.length} מתוך ${MAX_KIDS})</h3>
-    ${fam.roster.length ? `<ul class="kids">${fam.roster.map(k => `<li><span>${esc(k.emoji || '')} ${esc(k.name)}</span>${own ? `<button class="link" data-act="rmkid" data-id="${esc(k.id)}">הסרה</button>` : ''}</li>`).join('')}</ul>` : '<p class="empty">עוד לא נוספו ילדים.</p>'}
+    ${fam.roster.length ? `<ul class="kids">${fam.roster.map(k => { const en = window.EnglishEngine.nameOf(k) || ''; return `<li><span>${esc(k.emoji || '')} ${esc(k.name)} <span class="enname">· באנגלית: ${own ? `<form class="enf" data-form="en" data-id="${esc(k.id)}"><input aria-label="השם של ${esc(k.name)} באנגלית" value="${esc(en)}" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name"><button class="link" type="submit">שמירה</button></form>` : `<b dir="ltr">${esc(en || 'לא הוגדר')}</b>`}</span></span>${own ? `<button class="link" data-act="rmkid" data-id="${esc(k.id)}">הסרה</button>` : ''}</li>`; }).join('')}</ul><p class="p-sub">השם באנגלית משמש לתרגול "כותבים את השם שלי" ולברכה באנגלית.</p>` : '<p class="empty">עוד לא נוספו ילדים.</p>'}
     ${own && fam.roster.length < MAX_KIDS ? `<form class="addkid" data-form="add"><label>שם הילד/ה<input id="kname" maxlength="20" autocomplete="off" required></label>
       <fieldset><legend class="sr">מין</legend><label class="rd"><input type="radio" name="g" value="f" checked> בת</label><label class="rd"><input type="radio" name="g" value="m"> בן</label></fieldset>
       <button class="btn primary" type="submit">הוספה</button></form>` : ''}
@@ -605,6 +605,8 @@ app.addEventListener('submit', async e => {
   } else if (kind === 'invite') {
     try { await inviteParent(fam.code, document.getElementById('pemail').value); await reloadFamily(); }
     catch (err) { const m = { 'bad-email': 'כתובת המייל לא תקינה.', exists: 'ההורה הזה כבר ברשימה.', 'too-many': 'הגעתם למספר ההורים המקסימלי.' }[err.message]; if (m) alert(m); else fail(err, 'ההזמנה נכשלה'); }
+  } else if (kind === 'en') {
+    try { await setEnName(fam.code, e.target.dataset.id, e.target.querySelector('input').value); await reloadFamily(); } catch (err) { fail(err, 'השמירה נכשלה'); }
   } else if (kind === 'test') {
     const date = document.getElementById('tdate').value, name = document.getElementById('tname').value.trim() || 'מבדק';
     try { await setTest(fam.code, date ? { name, date } : null); await reloadFamily(); } catch (err) { fail(err, 'השמירה נכשלה'); }

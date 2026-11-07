@@ -11,8 +11,8 @@ export const FIREBASE_CONFIG = {
 
 // מצב מקומי בלבד (בלי Firebase): שני הילדים שמוצגים לבחירה. ב-Firebase הילדים מוגדרים בלוח ההורה, לכל משפחה בנפרד.
 export const LOCAL_KIDS = [
-  { id: 'emma',  name: 'אמה',  gender: 'f', emoji: '🦄', color: '#C2410C' },
-  { id: 'eitan', name: 'איתן', gender: 'm', emoji: '🚀', color: '#2F63D6' },
+  { id: 'emma',  name: 'אמה',  en: 'Emma', gender: 'f', emoji: '🦄', color: '#C2410C' },
+  { id: 'eitan', name: 'איתן', en: 'Eitan', gender: 'm', emoji: '🚀', color: '#2F63D6' },
 ];
 
 // תאריך מבדק למצב מקומי. ב-Firebase ההורה קובע תאריך בלוח הבקרה (אופציונלי).

@@ -133,6 +133,7 @@
     read: { title: 'קריאה', icon: '📖', target: 60, unit: 'מילים ומשפטים' },
     spell: { title: 'כתיבת מילים (איות)', icon: '📝', target: 50, unit: 'מילים' },
     speak: { title: 'דיבור והגייה', icon: '🗣️', target: 50, unit: 'אותיות ומילים' },
+    name: { title: 'כתיבת השם שלי', icon: '🪪', target: 1, unit: 'שם' },
     phon: { title: 'צלילים וחרוזים', icon: '🎵', target: 40, unit: 'משימות צליל' },
     chunk: { title: 'שיחה: ביטויים ושאלות', icon: '💬', target: CHUNKS.length, unit: 'ביטויים' },
   };
@@ -145,8 +146,8 @@
       curr: 'Pre-A1: מזהים את כל האותיות, גדולות וקטנות ("Can recognize the letters of the alphabet in upper and lower case"), והקשר בין אות לצליל (grapheme–phoneme correspondences).' },
     { id: 'phonics', title: 'צלילים וחרוזים', icon: '🎵', areas: ['phon'], n: 8, color: 'blue', desc: 'חרוזים, הצליל באמצע והצליל בסוף',
       curr: 'Pre-Foundation: מודעות פונולוגית: חרוזים, צליל פותח, אמצעי וסופי, ומילים קצרות מסוג CVC (כמו cat, pen).' },
-    { id: 'write', title: 'כותבים אותיות', icon: '✍️', areas: ['wup', 'wlo'], n: 6, color: 'pink', desc: 'אותיות גדולות וקטנות, באצבע על המסך',
-      curr: 'Pre-A1: כתיבת האותיות הגדולות והקטנות בכתב דפוס, בגובה הנכון ועל קווי הכתיבה ("using correct heights and parts of the writing line").' },
+    { id: 'write', title: 'כותבים אותיות', icon: '✍️', areas: ['wup', 'wlo', 'name'], n: 6, color: 'pink', desc: 'אותיות גדולות וקטנות, והשם שלי באנגלית',
+      curr: 'Pre-A1: כתיבת האותיות הגדולות והקטנות בכתב דפוס, בגובה הנכון ועל קווי הכתיבה ("using correct heights and parts of the writing line"), וכתיבת השם הפרטי ("Writes their own first and last name").' },
     { id: 'words', title: 'מילים ומשמעות', icon: '🧩', areas: ['vocab', 'listen'], n: 10, color: 'teal', desc: 'מה המילה אומרת ואיך היא נשמעת',
       curr: 'אוצר מילים לפי רשימת משרד החינוך: קודם Pre-Band I (כיתה ג\' ותחילת ד\'), אחר כך Band I Core I (כיתה ד\' עד אמצע ה\').' },
     { id: 'talk', title: 'שיחה באנגלית', icon: '💬', areas: ['chunk'], n: 8, color: 'orange', desc: 'שלום, מה שלומך, מה שמך ועוד',
@@ -432,6 +433,9 @@
         if (used[area + ':' + item] >= 2) continue;
         push({ kind: 'W_letter', area, item });
       }
+      // כתיבת השם באנגלית (אות גדולה בהתחלה): בכל שיעור עד שנשלט, ואחר כך מדי פעם
+      const nm = opts && opts.name && /^[A-Za-z]{2,12}$/.test(opts.name) ? opts.name[0].toUpperCase() + opts.name.slice(1).toLowerCase() : null;
+      if (nm && (box(p, 'name', nm) < MASTER || rng() < 0.3)) push({ kind: 'N_name', area: 'name', item: nm, name: nm });
       return { topic: topicId, tasks, intro, pace: pc };
     }
     if (topicId === 'words') {
@@ -724,7 +728,10 @@
     return out;
   }
 
-  return { STAGES, BAND_HE, CHUNKS, CD, RHYMES, CVC, curriculum, mkPhonTask, mkChunkTask, LETTERS, LET, GROUPS, WORDS, WD, THEMES, SENTENCES, SD, AREAS, AREA_IDS, TOPICS, TOPIC, TARGET_MS, MASTER, PACE_TEXT,
+  // שם הילד באנגלית: מההורה (roster.en), ואם לא הוזן — שמות מוכרים
+  const EN_NAMES = { 'אמה': 'Emma', 'איתן': 'Eitan', 'דני': 'Danny', 'דנה': 'Dana' };
+  const nameOf = kid => (kid && (kid.en || EN_NAMES[String(kid.name || '').trim()])) || null;
+  return { nameOf, EN_NAMES, STAGES, BAND_HE, CHUNKS, CD, RHYMES, CVC, curriculum, mkPhonTask, mkChunkTask, LETTERS, LET, GROUPS, WORDS, WD, THEMES, SENTENCES, SD, AREAS, AREA_IDS, TOPICS, TOPIC, TARGET_MS, MASTER, PACE_TEXT,
     newProfile, ensureProfile, box, mastered, masteredList, activeLetters, activeWords, locks, advance, pace, planSession, explain, pairTip,
     markIntro, record, recordSkip, recordSelf, recordPartial, completeSession, matchSpeech, areaInfo, abilityScore, report, used, practicedDay, WHY, HOW, mkLetterTask, mkWordTask, letterDistractors };
 });
