@@ -478,7 +478,7 @@ function familyPanel() {
     <div class="codebox"><div><span class="p-sub">קוד משפחה (לילדים, פעם אחת באפליקציה)</span><b class="code" dir="ltr" id="famcode">${esc(showCode(fam.code))}</b></div><button class="btn" data-act="copy">העתקה</button></div>
     <p class="p-sub" id="copied" role="status"></p>
     <h3>ילדים (${fam.roster.length} מתוך ${MAX_KIDS})</h3>
-    ${fam.roster.length ? `<ul class="kids">${fam.roster.map(k => { const en = window.EnglishEngine.nameOf(k) || ''; return `<li><span>${esc(k.emoji || '')} ${esc(k.name)} <span class="enname">· באנגלית: ${own ? `<form class="enf" data-form="en" data-id="${esc(k.id)}"><input aria-label="השם של ${esc(k.name)} באנגלית" value="${esc(en)}" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name"><button class="link" type="submit">שמירה</button></form>` : `<b dir="ltr">${esc(en || 'לא הוגדר')}</b>`}</span></span>${own ? `<button class="link" data-act="rmkid" data-id="${esc(k.id)}">הסרה</button>` : ''}</li>`; }).join('')}</ul><p class="p-sub">השם באנגלית משמש לתרגול "כותבים את השם שלי" ולברכה באנגלית.</p>` : '<p class="empty">עוד לא נוספו ילדים.</p>'}
+    ${fam.roster.length ? `<ul class="kids">${fam.roster.map(k => { const en = window.EnglishEngine.nameOf(k) || '', ln = window.EnglishEngine.surnameOf(k) || ''; return `<li><span>${esc(k.emoji || '')} ${esc(k.name)} <span class="enname">· באנגלית: ${own ? `<form class="enf" data-form="en" data-id="${esc(k.id)}"><input name="en" aria-label="השם של ${esc(k.name)} באנגלית" value="${esc(en)}" maxlength="12" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Name"><input name="last" aria-label="שם המשפחה של ${esc(k.name)} באנגלית" value="${esc(ln)}" maxlength="14" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Family name"><button class="link" type="submit">שמירה</button></form>` : `<b dir="ltr">${esc([en, ln].filter(Boolean).join(' ') || 'לא הוגדר')}</b>`}</span></span>${own ? `<button class="link" data-act="rmkid" data-id="${esc(k.id)}">הסרה</button>` : ''}</li>`; }).join('')}</ul><p class="p-sub">השם ושם המשפחה באנגלית משמשים לתרגול "כותבים את השם שלי" (שם המשפחה נפתח אחרי שהשם הפרטי נכתב נכון) ולברכה באנגלית.</p>` : '<p class="empty">עוד לא נוספו ילדים.</p>'}
     ${own && fam.roster.length < MAX_KIDS ? `<form class="addkid" data-form="add"><label>שם הילד/ה<input id="kname" maxlength="20" autocomplete="off" required></label>
       <fieldset><legend class="sr">מין</legend><label class="rd"><input type="radio" name="g" value="f" checked> בת</label><label class="rd"><input type="radio" name="g" value="m"> בן</label></fieldset>
       <button class="btn primary" type="submit">הוספה</button></form>` : ''}
@@ -491,19 +491,26 @@ function familyPanel() {
   </section>`;
 }
 
+// לשוניות: "תוצאות הילדים" (ברירת מחדל) ו"הגדרות משפחה". בלי ילדים עדיין — נפתח בהגדרות.
+let tab = null, lastDash = null;
 function renderDash(rows, banner, withFamily) {
-  lastRows = rows;
+  lastRows = rows; lastDash = [rows, banner, withFamily];
+  if (!tab) tab = withFamily && fam && !(fam.roster || []).length ? 'family' : 'kids';
   const f = getFamily(), test = withFamily ? fam.test : (f && f.test);
   let cd = '';
   if (test && test.date) {
     const d = daysBetween(E.dayKey(), test.date);
     cd = ` · ${d > 1 ? `עוד ${d} ימים` : d === 1 ? 'מחר' : d === 0 ? 'היום' : ''}`.replace(/ · $/, '');
   }
+  const T = (id, label) => `<button class="p-tab${tab === id ? ' on' : ''}" role="tab" aria-selected="${tab === id}" data-act="tab" data-tab="${id}">${label}</button>`;
+  const kidsTab = `<div class="p-tools">${banner && withFamily ? `<span class="p-upd">${banner}</span>` : ''}<button class="link" data-act="openall">פתיחת הכול</button><button class="link" data-act="closeall">סגירת הכול</button><button class="link" data-act="refresh">רענון</button></div>
+    ${rows.length ? rows.map(kidCard).join('') : `<p class="empty">עוד אין ילדים. מוסיפים ילדים ב"הגדרות משפחה".</p>`}
+    ${banner && !withFamily ? `<p class="banner small">${banner}</p>` : ''}`;
+  const famTab = withFamily ? familyPanel() : `<section class="kidcard famcard"><h2>הגדרות משפחה</h2><p>${banner || ''}</p><p class="p-sub">במצב מקומי הילדים מוגדרים בקובץ config.js.</p></section>`;
   app.innerHTML = `<main class="p-wrap">
-    <div class="p-head"><div><h1>התקדמות הילדים</h1><p class="p-sub">${test && test.date ? `${esc(test.name || 'מבדק')} · ${dm(test.date)}${cd}` : ''}</p></div><div class="p-actions"><a class="btn pv-link" href="index.html?preview=1">👀 האפליקציה של הילדים</a><button class="btn" data-act="openall">פתיחת הכול</button><button class="btn" data-act="closeall">סגירת הכול</button><button class="btn" data-act="refresh">רענון</button>${user ? '<button class="link" data-act="signout">יציאה</button>' : ''}</div></div>
-    ${banner ? `<p class="banner">${banner}</p>` : ''}
-    ${withFamily ? familyPanel() : ''}
-    ${rows.length ? rows.map(kidCard).join('') : '<p class="empty">הוסיפו ילד כדי להתחיל.</p>'}
+    <header class="p-top"><div><h1>לומדים כל יום · הורים</h1><p class="p-sub">${test && test.date ? `${esc(test.name || 'מבדק')} · ${dm(test.date)}${cd}` : ''}</p></div>${user ? '<button class="link" data-act="signout">יציאה</button>' : ''}</header>
+    <nav class="p-tabs" role="tablist" aria-label="תפריט">${T('kids', '📊 תוצאות<span class="xl"> הילדים</span>')}${T('family', '⚙️ <span class="xl">הגדרות </span>משפחה')}<a class="p-tab pv-link" href="index.html?preview=1">👀 תצוגה<span class="xl"> לילדים</span></a></nav>
+    ${tab === 'family' ? famTab : kidsTab}
   </main>`;
 }
 function renderGate(title, text, button, extra) {
@@ -562,6 +569,7 @@ app.addEventListener('click', async e => {
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const act = b.dataset.act;
+  if (act === 'tab') { tab = b.dataset.tab; if (lastDash) renderDash(...lastDash); window.scrollTo(0, 0); return; }
   if (act === 'refresh') { if (user) fam = null; return load(); }
   if (act === 'report') return openReport(b.dataset.id);
   if (act === 'pdf') return makePdf(b.dataset.id, b);
@@ -606,7 +614,7 @@ app.addEventListener('submit', async e => {
     try { await inviteParent(fam.code, document.getElementById('pemail').value); await reloadFamily(); }
     catch (err) { const m = { 'bad-email': 'כתובת המייל לא תקינה.', exists: 'ההורה הזה כבר ברשימה.', 'too-many': 'הגעתם למספר ההורים המקסימלי.' }[err.message]; if (m) alert(m); else fail(err, 'ההזמנה נכשלה'); }
   } else if (kind === 'en') {
-    try { await setEnName(fam.code, e.target.dataset.id, e.target.querySelector('input').value); await reloadFamily(); } catch (err) { fail(err, 'השמירה נכשלה'); }
+    try { await setEnName(fam.code, e.target.dataset.id, e.target.querySelector('input[name="en"]').value, e.target.querySelector('input[name="last"]').value); await reloadFamily(); } catch (err) { fail(err, 'השמירה נכשלה'); }
   } else if (kind === 'test') {
     const date = document.getElementById('tdate').value, name = document.getElementById('tname').value.trim() || 'מבדק';
     try { await setTest(fam.code, date ? { name, date } : null); await reloadFamily(); } catch (err) { fail(err, 'השמירה נכשלה'); }

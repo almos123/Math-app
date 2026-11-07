@@ -76,12 +76,13 @@ export async function removeChild(code, kidId) {
   await fs.updateDoc(ref, { roster: (d.roster || []).filter(k => k.id !== kidId), kidIds: (d.kidIds || []).filter(i => i !== kidId) });
 }
 // שם הילד באנגלית (לתרגול "כותבים את השם שלי"): אותיות באנגלית בלבד, אות ראשונה גדולה
-export async function setEnName(code, kidId, en) {
-  const clean = String(en || '').replace(/[^A-Za-z]/g, '').slice(0, 12);
-  const v = clean ? clean[0].toUpperCase() + clean.slice(1).toLowerCase() : '';
+export async function setEnName(code, kidId, en, last) {
+  const cap = (s, n) => { const c = String(s || '').replace(/[^A-Za-z]/g, '').slice(0, n); return c ? c[0].toUpperCase() + c.slice(1).toLowerCase() : ''; };
+  const v = cap(en, 12), patch = { en: v };
+  if (last !== undefined) patch.enLast = cap(last, 14);
   const { db, fs } = await loadFirebase();
   const ref = fs.doc(db, 'families', code), d = (await fs.getDoc(ref)).data();
-  await fs.updateDoc(ref, { roster: (d.roster || []).map(k => (k.id === kidId ? Object.assign({}, k, { en: v }) : k)) });
+  await fs.updateDoc(ref, { roster: (d.roster || []).map(k => (k.id === kidId ? Object.assign({}, k, patch) : k)) });
 }
 export async function setTest(code, test) {
   const { db, fs } = await loadFirebase();

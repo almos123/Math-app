@@ -436,6 +436,9 @@
       // כתיבת השם באנגלית (אות גדולה בהתחלה): בכל שיעור עד שנשלט, ואחר כך מדי פעם
       const nm = opts && opts.name && /^[A-Za-z]{2,12}$/.test(opts.name) ? opts.name[0].toUpperCase() + opts.name.slice(1).toLowerCase() : null;
       if (nm && (box(p, 'name', nm) < MASTER || rng() < 0.3)) push({ kind: 'N_name', area: 'name', item: nm, name: nm });
+      // שם המשפחה: נפתח אחרי שהשם הפרטי כבר נכתב נכון פעמיים
+      const ln = opts && opts.surname && /^[A-Za-z]{2,14}$/.test(opts.surname) ? opts.surname[0].toUpperCase() + opts.surname.slice(1).toLowerCase() : null;
+      if (ln && (!nm || box(p, 'name', nm) >= 2) && (box(p, 'name', ln) < MASTER || rng() < 0.3)) push({ kind: 'N_name', area: 'name', item: ln, name: ln, last: true });
       return { topic: topicId, tasks, intro, pace: pc };
     }
     if (topicId === 'words') {
@@ -731,7 +734,10 @@
   // שם הילד באנגלית: מההורה (roster.en), ואם לא הוזן — שמות מוכרים
   const EN_NAMES = { 'אמה': 'Emma', 'איתן': 'Eitan', 'דני': 'Danny', 'דנה': 'Dana' };
   const nameOf = kid => (kid && (kid.en || EN_NAMES[String(kid.name || '').trim()])) || null;
-  return { nameOf, EN_NAMES, STAGES, BAND_HE, CHUNKS, CD, RHYMES, CVC, curriculum, mkPhonTask, mkChunkTask, LETTERS, LET, GROUPS, WORDS, WD, THEMES, SENTENCES, SD, AREAS, AREA_IDS, TOPICS, TOPIC, TARGET_MS, MASTER, PACE_TEXT,
+  // שם המשפחה באנגלית: מה שההורה הגדיר, ואם לא הוגדר — ברירת המחדל של המשפחה שלנו לאמה ולאיתן
+  const EN_LAST = { 'אמה': 'Almosninos', 'איתן': 'Almosninos' };
+  const surnameOf = kid => (kid && (kid.enLast || EN_LAST[String(kid.name || '').trim()])) || null;
+  return { nameOf, surnameOf, EN_NAMES, EN_LAST, STAGES, BAND_HE, CHUNKS, CD, RHYMES, CVC, curriculum, mkPhonTask, mkChunkTask, LETTERS, LET, GROUPS, WORDS, WD, THEMES, SENTENCES, SD, AREAS, AREA_IDS, TOPICS, TOPIC, TARGET_MS, MASTER, PACE_TEXT,
     newProfile, ensureProfile, box, mastered, masteredList, activeLetters, activeWords, locks, advance, pace, planSession, explain, pairTip,
     markIntro, record, recordSkip, recordSelf, recordPartial, completeSession, matchSpeech, areaInfo, abilityScore, report, used, practicedDay, WHY, HOW, mkLetterTask, mkWordTask, letterDistractors };
 });

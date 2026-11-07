@@ -53,7 +53,7 @@ export function renderMenu() {
 // ---------- מהלך שיעור ----------
 function startTopic(id) {
   const p = prof(), rng = mulberry((Date.now() ^ 0x9e3779b9) >>> 0);
-  const plan = EN.planSession(p, id, rng, C.dayKey(), { ignoreLocks: !!C.preview, name: EN.nameOf(C.kid()) });
+  const plan = EN.planSession(p, id, rng, C.dayKey(), { ignoreLocks: !!C.preview, name: EN.nameOf(C.kid()), surname: EN.surnameOf(C.kid()) });
   if (plan.locked) { toast(plan.locked.need); return; }
   if (!plan.tasks.length) { toast('אין כרגע מה לתרגל כאן. נסו נושא אחר.'); return; }
   run = { topic: id, rng, plan, queue: plan.tasks.slice(), i: 0, n: 0, ok: 0, ms: 0, stars: 0, sk: 0, retried: new Set(), again: new Set(), events: [], t0: 0, locked: false, task: null, attempts: 0, byArea: {} };
@@ -506,12 +506,12 @@ function viewSpellHand(t) {
 }
 // כותבים את השם שלי: דוגמה למעלה, אות ראשונה גדולה ושאר האותיות קטנות, עם הדגמה לכל אות
 function viewName(t) {
-  run.sp = { word: t.name, pos: 0, wrongs: 0, reveals: 0, tries: 0, name: true };
+  run.sp = { word: t.name, pos: 0, wrongs: 0, reveals: 0, tries: 0, name: true, last: !!t.last };
   C.app.innerHTML = `<main class="screen en-spell c-pink">
     ${head()}
-    <section class="qcard"><div class="tp"><span aria-hidden="true">🪪</span> כותבים את השם שלי באנגלית${skipBtn(t)}</div>
+    <section class="qcard"><div class="tp"><span aria-hidden="true">🪪</span> ${t.last ? 'כותבים את שם המשפחה באנגלית' : 'כותבים את השם שלי באנגלית'}${skipBtn(t)}</div>
       <div class="name-model en" dir="ltr">${esc(t.name)}</div>
-      <p class="rule">שם תמיד מתחיל באות גדולה (${esc(t.name[0])}), ושאר האותיות קטנות.</p>
+      <p class="rule">${t.last ? 'גם שם משפחה' : 'שם'} תמיד מתחיל באות גדולה (${esc(t.name[0])}), ושאר האותיות קטנות.</p>
       <div class="slots" dir="ltr" id="slots">${[...t.name].map((c, i) => `<span class="slot${i === 0 ? ' cur' : ''}"></span>`).join('')}</div>
       <p class="ev" id="spmsg">כתבו את האות הראשונה: ${esc(t.name[0])} (אות גדולה)</p></section>
     <div id="padhost" class="padhost"></div>
@@ -520,7 +520,7 @@ function viewName(t) {
   </main>`;
   run.pad = makePad(document.getElementById('padhost'), { letter: t.name[0], trace: false, label: 'משטח כתיבה' });
   fitPad();
-  say(`My name is ${t.name}`);
+  say(t.last ? `My family name is ${t.name}` : `My name is ${t.name}`);
 }
 function spellCheck() {
   const t = run.task, s = run.sp, pad = run.pad; if (!pad || run.locked) return;
@@ -550,7 +550,7 @@ function spellCheck() {
 function spellDone() {
   const t = run.task, s = run.sp; run.locked = true;
   const ok = s.reveals === 0, res = commit(t, ok, {});
-  if (s.name) { if (ok) sparkle(); sheet(ok, ok ? [`כתבת את השם שלך באנגלית: ${t.name}!`, 'אות ראשונה גדולה, ושאר האותיות קטנות. בדיוק ככה.'] : [`השם שלך נכתב: ${t.name.split('').join(' - ')}`, 'נתרגל אותו שוב בשיעור הבא.'], res, [{ t: `My name is ${t.name}`, label: 'My name is…' }]); say(`My name is ${t.name}`); return; }
+  if (s.name) { const ph = t.last ? `My family name is ${t.name}` : `My name is ${t.name}`, w = t.last ? 'שם המשפחה שלך' : 'השם שלך'; if (ok) sparkle(); sheet(ok, ok ? [`כתבת את ${w} באנגלית: ${t.name}!`, 'אות ראשונה גדולה, ושאר האותיות קטנות. בדיוק ככה.'] : [`${w} נכתב: ${t.name.split('').join(' - ')}`, 'נתרגל אותו שוב בשיעור הבא.'], res, [{ t: ph, label: t.last ? 'My family name is…' : 'My name is…' }]); say(ph); return; }
   const w = EN.WD[t.word];
   if (ok) sparkle();
   sheet(ok, ok ? [`${w.en} ${w.em} = ${w.he}`, s.wrongs ? 'תיקנת את עצמך, מצוין!' : 'כתבת את כל המילה נכון!'] : [`המילה נכתבת: ${w.en.split('').join(' - ')}`, 'נחזור עליה בפעם הבאה. כדאי לומר את הצלילים בזמן הכתיבה.'], res, [{ t: w.en, label: 'איך אומרים' }]);

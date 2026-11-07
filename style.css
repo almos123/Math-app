@@ -696,3 +696,17 @@ body.pv .screen { min-height: calc(100dvh - 40px); }
 .name-model { text-align: center; font-size: 54px; font-weight: 700; color: var(--tc); letter-spacing: .06em; line-height: 1.1; }
 .kids .enname { font-size: 13.5px; color: var(--ink2); } .kids form.enf { display: inline-flex; gap: 6px; align-items: center; }
 .kids form.enf input { width: 110px; font: inherit; padding: 4px 8px; border: 2px solid var(--line); border-radius: 8px; direction: ltr; }
+
+/* ---------- לוח ההורה: כותרת קומפקטית ולשוניות ---------- */
+.p-top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.p-top h1 { font-size: 22px; font-weight: 700; }
+.p-top .p-sub { font-size: 14px; }
+.p-tabs { display: flex; gap: 6px; flex-wrap: wrap; position: sticky; top: 0; z-index: 5; background: var(--paper); padding: 6px 0; margin: -6px 0; }
+.p-tab { flex: 1 1 0; min-width: 0; min-height: 44px; font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: 8px 10px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; text-align: center; white-space: nowrap; }
+.p-tab.on { border-color: var(--ink); background: var(--blue-soft); box-shadow: 3px 3px 0 var(--ink); }
+.p-tab.pv-link { flex: 0 0 auto; font-weight: 500; font-size: 14px; }
+.p-tools { display: flex; gap: 14px; justify-content: flex-end; font-size: 14px; margin-bottom: -8px; }
+.banner.small { font-size: 14px; padding: 7px 12px; }
+.kids form.enf { flex-wrap: wrap; } .kids form.enf input[name="last"] { width: 130px; }
+.p-tools .p-upd { margin-inline-end: auto; color: var(--ink2); }
+@media (max-width: 460px) { .p-tab { font-size: 14.5px; padding: 8px 6px; } .p-tab .xl { display: none; } }
