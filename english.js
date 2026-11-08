@@ -9,6 +9,8 @@
 
   // ---------- אותיות ----------
   // name: איך מנוע הדיבור אומר את שם האות; he: שם האות בעברית; snd: הצליל; kw: מילת מפתח
+  // מה שולחים למנוע הדיבור: "ay" נקרא בטלפונים כמו aye (= "אַיי", כמו האות i), ולכן ל-A שולחים את האות עצמה כאות גדולה
+  const TTS = { a: 'A' };
   const LETTERS = [
     ['a', 'ay', 'אֵיי', 'אַ (כמו ב-apple)', 'apple'], ['b', 'bee', 'בִּי', 'בּ', 'ball'], ['c', 'see', 'סִי', 'ק (כמו ב-cat)', 'cat'],
     ['d', 'dee', 'דִּי', 'ד', 'dog'], ['e', 'ee', 'אִי', 'אֶ (כמו ב-egg)', 'egg'], ['f', 'eff', 'אֶף', 'פ (f)', 'fish'],
@@ -19,7 +21,7 @@
     ['s', 'ess', 'אֶס', 'ס', 'sun'], ['t', 'tee', 'טִי', 'ט', 'tree'], ['u', 'you', 'יוּ', 'אַ (כמו ב-up)', 'up'],
     ['v', 'vee', 'וִי', 'ו (כמו ב-violin)', 'violin'], ['w', 'double you', 'דַּאבֶּל יוּ', 'וו (כמו ב-window)', 'window'], ['x', 'ex', 'אֶקְס', 'קס (כמו בסוף box)', 'box'],
     ['y', 'why', 'וַאי', 'י (כמו ב-yellow)', 'yellow'], ['z', 'zee', 'זִי', 'ז', 'zebra'],
-  ].map(([l, name, he, snd, kw]) => ({ l, u: l.toUpperCase(), name, he, snd, kw }));
+  ].map(([l, name, he, snd, kw]) => ({ l, u: l.toUpperCase(), name, tts: TTS[l] || name, he, snd, kw }));
   const LET = Object.fromEntries(LETTERS.map(x => [x.l, x]));
   // סדר לימוד לפי צלילים (כך אפשר לקרוא מילים קצרות כבר אחרי הקבוצה הראשונה)
   const GROUPS = ['satpin', 'mdgock', 'eurhbf', 'ljvwyz', 'qx'];
@@ -261,7 +263,7 @@
     const L = L1(l);
     if (kind === 'L_hear') {
       const ch = shuffle([l].concat(letterDistractors(l, 3, rng)), rng);
-      return { kind, area: 'lname', item: l, say: L.name, prompt: 'איזו אות שמעתם?', choices: ch.map(x => ({ v: x, label: L1(x).u + ' ' + x, en: true })), answer: l };
+      return { kind, area: 'lname', item: l, say: L.tts, prompt: 'איזו אות שמעתם?', choices: ch.map(x => ({ v: x, label: L1(x).u + ' ' + x, en: true })), answer: l };
     }
     if (kind === 'L_name') {
       const ch = shuffle([l].concat(letterDistractors(l, 3, rng)), rng), showUp = rng() < 0.5;
@@ -498,7 +500,7 @@
       while (tasks.length < n && guard++ < 100) {
         const it = weighted(items, x => itemWeight(p, 'speak', x) / (1 + 4 * (used['speak:' + x] || 0)), rng);
         if (used['speak:' + it]) continue;
-        push(it[0] === 'L' ? { kind: 'S_letter', area: 'speak', item: it, letter: it.slice(2), say: L1(it.slice(2)).name } : { kind: 'S_word', area: 'speak', item: it, word: it.slice(2), say: WD[it.slice(2)].en });
+        push(it[0] === 'L' ? { kind: 'S_letter', area: 'speak', item: it, letter: it.slice(2), say: L1(it.slice(2)).tts } : { kind: 'S_word', area: 'speak', item: it, word: it.slice(2), say: WD[it.slice(2)].en });
       }
       return { topic: topicId, tasks, intro, pace: pc };
     }

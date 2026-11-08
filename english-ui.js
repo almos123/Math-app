@@ -113,7 +113,7 @@ function viewIntroL(t) {
     <p class="new-tag">✨ אות חדשה ✨</p>
     <div class="big-letter" dir="ltr" aria-label="האות ${L.u} ${L.l}"><b class="up">${L.u}</b><b class="lo">${L.l}</b></div>
     <div class="facts">
-      <div class="fact"><span class="fl">השם</span><b>${esc(L.he)}</b>${spk(L.name, 'שם האות')}</div>
+      <div class="fact"><span class="fl">השם</span><b>${esc(L.he)}</b>${spk(L.tts, 'שם האות')}</div>
       <div class="fact"><span class="fl">הצליל</span><b>${esc(L.snd)}</b></div>
       <div class="fact kw"><span class="fl">כמו ב-</span><span class="kwem" aria-hidden="true">${w.em}</span><b>${enTxt(w.en)}</b><span class="ev">${esc(w.he)}</span>${spk(w.en, 'המילה')}</div>
     </div>
@@ -124,7 +124,7 @@ function viewIntroL(t) {
   </main>`;
   EN.markIntro(prof(), 'introL', t.item, C.dayKey()); C.save(C.dayKey());
   document.querySelectorAll('.demo-c').forEach((c, i) => miniDemo(c, c.dataset.ch, 300 + i * 1400));
-  say(L.name).then(() => say(w.en));
+  say(L.tts).then(() => say(w.en));
 }
 function viewIntroW(t) {
   const w = EN.WD[t.item];
@@ -218,7 +218,7 @@ function choose(i) {
   }
 }
 function sayAnswer(t) {
-  if (t.kind.startsWith('L_')) { if (t.kind === 'L_first') return EN.WD[t.word].en; if (t.kind === 'L_pic') return EN.WD[t.answer].en; return EN.LET[t.item].name; }
+  if (t.kind.startsWith('L_')) { if (t.kind === 'L_first') return EN.WD[t.word].en; if (t.kind === 'L_pic') return EN.WD[t.answer].en; return EN.LET[t.item].tts; }
   if (t.kind === 'R_sent') return EN.SD[t.answer].en;
   if (t.kind === 'F_rhyme') return `${EN.WD[t.word].en}, ${EN.WD[t.answer].en}`;
   if (t.kind === 'F_mid' || t.kind === 'F_end') return EN.WD[t.word].en;
@@ -381,7 +381,7 @@ function viewWrite(t) {
   const L = EN.LET[ch.toLowerCase()], upper = ch === ch.toUpperCase(), tm = Ink.tmpl(ch);
   C.app.innerHTML = `<main class="screen en-write c-pink">
     ${head()}
-    <section class="qcard wq"><div class="tp"><span aria-hidden="true">✍️</span> כותבים את האות <b class="en" dir="ltr">${ch}</b> ${upper ? 'הגדולה' : 'הקטנה'}${spk(L.name, 'שם האות')}${skipBtn(t)}</div>
+    <section class="qcard wq"><div class="tp"><span aria-hidden="true">✍️</span> כותבים את האות <b class="en" dir="ltr">${ch}</b> ${upper ? 'הגדולה' : 'הקטנה'}${spk(L.tts, 'שם האות')}${skipBtn(t)}</div>
       <p class="rule">${esc(Ink.caseRule(ch))}</p>
       ${trace ? '<p class="ev">עוברים באצבע על האות הסגולה, מתחילים בנקודה הירוקה ⓵.</p>' : '<p class="ev">עכשיו לבד! אפשר ללחוץ על "איך כותבים" כדי לראות שוב.</p>'}
     </section>
